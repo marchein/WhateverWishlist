@@ -1,5 +1,13 @@
 # WhateverWishlist
 
+[![Latest push CI status](https://github.com/marchein/WhateverWishlist/actions/workflows/docker.yml/badge.svg?event=push)](https://github.com/marchein/WhateverWishlist/actions/workflows/docker.yml?query=event%3Apush)
+[![Latest tag](https://img.shields.io/github/v/tag/marchein/WhateverWishlist?label=latest%20tag)](https://github.com/marchein/WhateverWishlist/tags)
+[![Node.js 24](https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white)](#development-and-contributing)
+[![100% AI-generated](https://img.shields.io/badge/AI--generated-100%25-8A2BE2)](#-ai-generated-project)
+
+CI status reflects the latest push workflow run across branches, including tests, lint and builds.
+The version badge shows the latest Git tag, not a GitHub Release.
+
 <img src="./frontend/src/assets/icon/app-icon.svg" width="80" alt="WhateverWishlist gift icon" />
 
 A self-hosted wishlist for wishes from any shop. Share one link with friends and family:
@@ -9,6 +17,13 @@ Available as a web app and a native iOS app.
 **Start here:** [Deploy](#deploy-with-docker) · [Update](#update-or-roll-back) ·
 [Manage users](#command-line-administration) · [Back up](#back-up-and-restore) ·
 [Contribute](#development-and-contributing) · [Publish a release](#build-and-publish-on-github) · [iOS](#ios-app)
+
+## 🤖 AI-generated project
+
+The code in this repository is **100% AI-generated**. I (@marchein) act as the
+directing developer: I define the requirements, review every change, test the
+results, and decide what ships — but I did not hand-write the implementation.
+Treat it accordingly and review before deploying anything to production.
 
 ## Deploy with Docker
 
@@ -245,7 +260,8 @@ docker compose up -d --no-build
 ## Build and publish on GitHub
 
 The [Docker images workflow](.github/workflows/docker.yml) runs tests, frontend lint, production
-builds and a development frontend build on every branch push and pull request.
+builds and a development frontend build on every branch push and release-tag push.
+Pull request events do not trigger a separate run, avoiding duplicate checks for branch pushes.
 It publishes backend and frontend images for `linux/amd64` and `linux/arm64` only when a
 `vMAJOR.MINOR.PATCH` tag is pushed or the workflow is run manually.
 It uses the built-in `GITHUB_TOKEN` with package-write permission; no registry secret is needed.
