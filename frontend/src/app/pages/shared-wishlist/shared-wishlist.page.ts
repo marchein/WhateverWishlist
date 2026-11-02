@@ -39,6 +39,7 @@ import { I18nService, LocalDatePipe, PricePipe, TranslatePipe } from '../../core
 import type { Purchase, SharedItem, SharedWishlist } from '../../core/models';
 import { AssetUrlPipe, HostnamePipe, NotifyService } from '../../core/ui';
 import { isFullyBought, SORT_OPTIONS, sortItems, type Sort } from './sort-items';
+import { WishlistDetailPage } from '../wishlist-detail/wishlist-detail.page';
 
 type Filter = 'all' | 'open' | 'bought';
 
@@ -48,6 +49,7 @@ type Filter = 'all' | 'open' | 'bought';
   templateUrl: 'shared-wishlist.page.html',
   styleUrls: ['shared-wishlist.page.scss'],
   imports: [
+    WishlistDetailPage,
     LocalDatePipe,
     TranslatePipe,
     RouterLink,
@@ -95,6 +97,7 @@ export class SharedWishlistPage implements ViewWillEnter {
   readonly token = input.required<string>();
   readonly data = signal<SharedWishlist | null>(null);
   readonly notFound = signal(false);
+  readonly revision = signal(0);
   readonly filter = signal<Filter>('all');
   readonly sort = signal<Sort>('newest');
   readonly busyItem = signal<string | null>(null);
@@ -118,7 +121,10 @@ export class SharedWishlistPage implements ViewWillEnter {
   async load(event?: RefresherCustomEvent): Promise<void> {
     try {
       this.data.set(await this.api.getShared(this.token()));
+      this.notFound.set(false);
+      this.revision.update((value) => value + 1);
     } catch (error) {
+      this.data.set(null);
       this.notFound.set(true);
       await this.notify.error(error);
     } finally {

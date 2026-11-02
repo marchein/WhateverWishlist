@@ -57,6 +57,7 @@ const migrations: string[] = [
   );
   CREATE INDEX idx_purchases_item ON purchases(item_id);
   `,
+  `ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0;`,
 ];
 
 export function openDatabase(file: string): DB {

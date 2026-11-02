@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import { createApp } from './app.js';
 import { openDatabase } from './db.js';
+import { version } from './version.js';
 
 const db = openDatabase(':memory:');
 const server = createApp(db).listen(0);
@@ -49,6 +50,14 @@ describe('wishlist API', () => {
     db.close();
   });
 
+  it('reports the running backend version publicly without caching it', async () => {
+    const response = await fetch(`${base}/api/health`);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(await response.json(), { ok: true, version });
+    assert.ok(version.length > 0);
+  });
+
   it('rejects duplicate registrations and bad logins', async () => {
     const duplicate = await api('/auth/register', {
       body: { email: 'owner@example.com', password: 'secret-password', displayName: 'X' },
@@ -92,6 +101,17 @@ describe('wishlist API', () => {
     const anonymous = await api(`/wishlists/${wishlistId}`);
     assert.equal(anonymous.status, 401);
     assert.equal(anonymous.body.code, 'AUTH_REQUIRED');
+    const edit = await api(`/wishlists/${wishlistId}`, {
+      method: 'PATCH', token: friendToken, body: { title: 'Unauthorized edit' },
+    });
+    assert.equal(edit.status, 404);
+    const add = await api(`/wishlists/${wishlistId}/items`, {
+      token: friendToken, body: { title: 'Unauthorized item' },
+    });
+    assert.equal(add.status, 404);
+    const shared = await api(`/shared/${shareToken}`, { token: friendToken });
+    assert.equal(shared.status, 200);
+    assert.equal(shared.body.isOwner, false);
   });
 
   it('PATCH only touches the provided fields', async () => {
@@ -105,6 +125,19 @@ describe('wishlist API', () => {
     assert.equal(updated.body.priority, 5);
     assert.equal(updated.body.quantity, 2);
     assert.equal(updated.body.price, 50);
+  });
+
+  it('preserves existing share tokens through owner views, edits and version checks', async () => {
+    await api('/health');
+    await api(`/wishlists/${wishlistId}`, { token: ownerToken });
+    const edited = await api(`/wishlists/${wishlistId}`, {
+      method: 'PATCH', token: ownerToken, body: { title: 'Christmas' },
+    });
+    assert.equal(edited.body.shareToken, shareToken);
+    const shared = await api(`/shared/${shareToken}`);
+    assert.equal(shared.status, 200);
+    assert.equal(shared.body.wishlist.id, wishlistId);
+    assert.equal(shared.body.wishlist.title, 'Christmas');
   });
 
   it('lets guests and users mark items as bought and undo it, with full history', async () => {

@@ -3,6 +3,7 @@ export interface UserRow {
   email: string;
   display_name: string;
   password_hash: string;
+  session_version: number;
   created_at: string;
 }
 

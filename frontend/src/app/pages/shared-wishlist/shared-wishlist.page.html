@@ -1,7 +1,14 @@
+@let current = data();
+@if (current && current.isOwner) {
+  <app-wishlist-detail [id]="current.wishlist.id" [revision]="revision()" />
+} @else {
 <ion-header>
   <ion-toolbar>
     <ion-title>{{ data()?.wishlist?.title ?? ('app.title' | t) }}</ion-title>
     <ion-buttons slot="end">
+      <ion-button routerLink="/status" [attr.aria-label]="'status.title' | t">
+        <ion-icon slot="icon-only" name="information-circle-outline" />
+      </ion-button>
       @if (auth.isLoggedIn()) {
         <ion-button routerLink="/wishlists" [title]="'wishlists.title' | t" [attr.aria-label]="'wishlists.title' | t">
           <ion-icon slot="icon-only" name="gift-outline" />
@@ -35,15 +42,6 @@
         <p>{{ d.wishlist.description }}</p>
       }
     </div>
-
-    @if (d.isOwner) {
-      <ion-card color="light" class="owner-note">
-        <ion-card-content>
-          <ion-icon name="eye-off-outline" />
-          {{ 'shared.ownerNote' | t }}
-        </ion-card-content>
-      </ion-card>
-    }
 
     <div class="controls ion-padding-horizontal">
       @if (!d.isOwner) {
@@ -183,3 +181,4 @@
 
   <app-language-switch />
 </ion-content>
+}

@@ -2,6 +2,9 @@
   <ion-toolbar>
     <ion-title>{{ 'wishlists.title' | t }}</ion-title>
     <ion-buttons slot="end">
+      <ion-button routerLink="/status" [attr.aria-label]="'status.title' | t">
+        <ion-icon slot="icon-only" name="information-circle-outline" />
+      </ion-button>
       <ion-button (click)="logout()" [title]="'common.logout' | t" [attr.aria-label]="'common.logout' | t">
         <ion-icon slot="icon-only" name="log-out-outline" />
       </ion-button>
@@ -29,7 +32,7 @@
   } @else {
     <ion-list>
       @for (wishlist of wishlists(); track wishlist.id) {
-        <ion-item [routerLink]="['/wishlists', wishlist.id]" detail>
+        <ion-item [routerLink]="['/s', wishlist.shareToken]" detail>
           <ion-icon slot="start" name="gift-outline" color="primary" />
           <ion-label>
             <h2>{{ wishlist.title }}</h2>

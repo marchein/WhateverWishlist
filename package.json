@@ -1,11 +1,15 @@
 {
   "name": "wishlist",
+  "version": "1.0.3",
   "private": true,
   "scripts": {
+    "version": "node scripts/version.mjs --sync",
+    "version:check": "node scripts/version.mjs --check",
+    "test:version": "node --test scripts/version.test.mjs",
     "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
     "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
     "build": "npm run build --prefix backend && npm run build --prefix frontend",
-    "test": "npm test --prefix backend && npm test --prefix frontend -- --watch=false"
+    "test": "npm run test:version && npm run test:icons --prefix frontend && npm test --prefix backend && npm test --prefix frontend -- --watch=false"
   },
   "devDependencies": {
     "concurrently": "^10.0.6"

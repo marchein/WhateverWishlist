@@ -105,7 +105,7 @@ export class WishlistsPage implements ViewWillEnter {
         description: null,
         eventDate: data?.values.eventDate || null,
       });
-      await this.nav.navigateForward(['/wishlists', wishlist.id]);
+      await this.nav.navigateForward(['/s', wishlist.shareToken]);
     } catch (error) {
       await this.notify.error(error);
     }

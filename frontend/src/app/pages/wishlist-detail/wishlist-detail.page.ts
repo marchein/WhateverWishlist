@@ -1,20 +1,20 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal, type OnChanges } from '@angular/core';
 import {
   ActionSheetController,
   AlertController,
   IonBackButton,
   IonButton,
   IonButtons,
-  IonCard,
-  IonCardContent,
   IonContent,
   IonFab,
   IonFabButton,
   IonHeader,
   IonIcon,
+  IonInput,
   IonItem,
   IonLabel,
   IonList,
+  IonModal,
   IonNote,
   IonSpinner,
   IonThumbnail,
@@ -22,7 +22,6 @@ import {
   IonToolbar,
   ModalController,
   NavController,
-  type ViewWillEnter,
 } from '@ionic/angular';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
@@ -52,10 +51,10 @@ import { AssetUrlPipe, NotifyService } from '../../core/ui';
     IonTitle,
     IonButton,
     IonIcon,
+    IonInput,
     IonContent,
-    IonCard,
-    IonCardContent,
     IonList,
+    IonModal,
     IonItem,
     IonThumbnail,
     IonLabel,
@@ -65,7 +64,7 @@ import { AssetUrlPipe, NotifyService } from '../../core/ui';
     IonFabButton,
   ],
 })
-export class WishlistDetailPage implements ViewWillEnter {
+export class WishlistDetailPage implements OnChanges {
   private readonly api = inject(ApiService);
   private readonly modals = inject(ModalController);
   private readonly alerts = inject(AlertController);
@@ -74,15 +73,18 @@ export class WishlistDetailPage implements ViewWillEnter {
   private readonly notify = inject(NotifyService);
   private readonly i18n = inject(I18nService);
 
-  /** Bound from the :id route parameter. */
+  /** Supplied only after the shared API confirms this viewer owns the list. */
   readonly id = input.required<string>();
+  readonly revision = input(0);
   readonly wishlist = signal<WishlistWithItems | null>(null);
+  readonly sharing = signal(false);
+  readonly systemSharingAvailable = Capacitor.isNativePlatform() || typeof navigator.share === 'function';
   readonly shareUrl = computed(() => {
     const wishlist = this.wishlist();
     return wishlist ? `${environment.webBaseUrl || window.location.origin}/s/${wishlist.shareToken}` : '';
   });
 
-  ionViewWillEnter(): void {
+  ngOnChanges(): void {
     void this.load();
   }
 
@@ -105,28 +107,30 @@ export class WishlistDetailPage implements ViewWillEnter {
     if (role === 'saved' || role === 'deleted') await this.load();
   }
 
-  async share(): Promise<void> {
+  share(): void {
+    if (this.wishlist()) this.sharing.set(true);
+  }
+
+  async shareUsingDevice(): Promise<void> {
     const wishlist = this.wishlist();
     if (!wishlist) return;
     const url = this.shareUrl();
     const text = this.i18n.t('detail.shareText', { title: wishlist.title });
-    if (Capacitor.isNativePlatform()) {
-      try {
+    try {
+      if (Capacitor.isNativePlatform()) {
         await Share.share({ title: wishlist.title, text, url, dialogTitle: this.i18n.t('detail.share') });
-      } catch {
-        // The user closed the share sheet.
-      }
-      return;
-    }
-    if (navigator.share) {
-      try {
+      } else if (navigator.share) {
         await navigator.share({ title: wishlist.title, text, url });
-        return;
-      } catch (error) {
-        if ((error as Error).name === 'AbortError') return;
+      } else {
+        throw new Error('System sharing is not available');
       }
+    } catch (error) {
+      if (
+        (error instanceof Error || error instanceof DOMException) &&
+        (error.name === 'AbortError' || error.message === 'Share canceled')
+      ) return;
+      await this.notify.error(error);
     }
-    await this.copyLink();
   }
 
   async copyLink(): Promise<void> {
@@ -142,8 +146,8 @@ export class WishlistDetailPage implements ViewWillEnter {
     const t = this.i18n.t.bind(this.i18n);
     const sheet = await this.actionSheets.create({
       buttons: [
+        { text: t('detail.copyLink'), icon: 'copy-outline', data: 'copy' },
         { text: t('detail.menu.edit'), icon: 'create-outline', data: 'edit' },
-        { text: t('detail.menu.preview'), icon: 'open-outline', data: 'preview' },
         { text: t('detail.menu.regenerate'), icon: 'refresh-outline', data: 'regenerate' },
         { text: t('detail.menu.delete'), icon: 'trash-outline', role: 'destructive', data: 'delete' },
         { text: t('common.cancel'), role: 'cancel' },
@@ -151,8 +155,8 @@ export class WishlistDetailPage implements ViewWillEnter {
     });
     await sheet.present();
     const { data } = await sheet.onDidDismiss<string>();
+    if (data === 'copy') await this.copyLink();
     if (data === 'edit') await this.editDetails();
-    if (data === 'preview') await this.nav.navigateForward(['/s', this.wishlist()!.shareToken]);
     if (data === 'regenerate') await this.regenerateLink();
     if (data === 'delete') await this.deleteList();
   }
@@ -204,8 +208,8 @@ export class WishlistDetailPage implements ViewWillEnter {
     await alert.present();
     if ((await alert.onDidDismiss()).role !== 'confirm') return;
     try {
-      await this.api.regenerateShareToken(this.id());
-      await this.load();
+      const wishlist = await this.api.regenerateShareToken(this.id());
+      await this.nav.navigateRoot(['/s', wishlist.shareToken]);
       await this.notify.success(this.i18n.t('detail.regenerate.done'));
     } catch (error) {
       await this.notify.error(error);

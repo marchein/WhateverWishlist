@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom, type Observable } from 'rxjs';
+import { firstValueFrom, timeout, type Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type {
   AuthResponse,
@@ -38,6 +38,10 @@ export class ApiService {
   }
 
   // Auth
+  health() {
+    return this.call(this.http.get<{ ok: boolean; version?: string }>(`${API_URL}/health`).pipe(timeout(10_000)));
+  }
+
   register(email: string, password: string, displayName: string) {
     return this.post<AuthResponse>('/auth/register', { email, password, displayName });
   }

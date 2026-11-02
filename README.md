@@ -1,189 +1,309 @@
-# Wishlist
+# WhateverWishlist
 
-One shareable wishlist instead of "I want X or Y" plus scattered Amazon/Xbox/… lists.
-Friends and family open the share link, see what's still needed and mark things as bought –
-the owner never sees what was bought.
+<img src="./frontend/src/assets/icon/app-icon.svg" width="80" alt="WhateverWishlist gift icon" />
 
-```
-backend/       Node + Express 5 + SQLite (better-sqlite3) REST API, TypeScript
-frontend/      Ionic 9 + Angular 22 (standalone, zoneless) web app
-frontend/ios/  The same app as native iOS app (Capacitor), talking to https://wishlist.hein.cx
-```
+A self-hosted wishlist for wishes from any shop. Share one link with friends and family:
+they can mark gifts as bought, while purchases stay hidden from the logged-in owner.
+Available as a web app and a native iOS app.
 
-## Getting started
+**Start here:** [Deploy](#deploy-with-docker) · [Update](#update-or-roll-back) ·
+[Manage users](#command-line-administration) · [Back up](#back-up-and-restore) ·
+[Contribute](#development-and-contributing) · [Publish a release](#build-and-publish-on-github) · [iOS](#ios-app)
 
-Requires Node 24 (`nvm use` picks it up from `.nvmrc`).
+## Deploy with Docker
 
-```bash
-npm run install:all   # root, backend and frontend dependencies
-npm run dev           # API on http://localhost:3000, app on http://localhost:4200
-npm test              # backend (node:test) + frontend (vitest) tests
-```
-
-Backend configuration lives in `backend/.env` (see [backend/.env.example](backend/.env.example)).
-In development a JWT secret is generated into `backend/data/`, together with the SQLite database and uploads.
-
-## How it works
-
-- **Owners** (registered) create wishlists and items: title, picture (URL or upload), price, priority (1–5),
-  quantity, any number of shop links and notes.
-- **Paste a link** (or share-sheet text containing one) and the backend reads title, picture and price from
-  JSON-LD, Amazon markup, Open Graph and microdata. When a shop blocks the request, the UI shows what was pasted,
-  what was found, what's missing and why – and guesses a title from the URL.
-- **Share link** `/s/<token>`: anyone with it (guest with a name, or logged in) can mark items as bought
-  (partially, for quantities > 1) or undo it. Every purchase and undo is kept with name and time, and undos by
-  someone other than the buyer are highlighted.
-- The owner's API responses never contain purchase data, even when opening their own share link.
-- Share links show a rich preview in messengers: the web container injects list-specific Open Graph tags
-  (title, owner, number of wishes, a picture) into the page for `/s/<token>` – never anything about purchases.
-
-## Deployment with Docker
-
-The app runs as a stack of two containers defined in [docker-compose.yml](docker-compose.yml):
-
-| Service | Image                          | Purpose                                                                       |
-| ------- | ------------------------------ | ----------------------------------------------------------------------------- |
-| `api`   | `ghcr.io/marchein/wishlist-api` | Node backend; SQLite database and uploads live in the `data` volume           |
-| `web`   | `ghcr.io/marchein/wishlist-web` | nginx serving the app and proxying `/api` and `/uploads` to `api` (port 8080) |
-
-`docker-compose.yml` uses the `latest` tag of both images, i.e. always the newest release. Only `web` is
-published to the host. All other configuration lives in **one `.env` file** next to `docker-compose.yml` – copy
-[.env.example](.env.example) and fill it in:
-
-```bash
-cp .env.example .env
-openssl rand -base64 48   # paste the output as JWT_SECRET
-```
-
-| Variable                  | Meaning                                                                                        |
-| ------------------------- | ---------------------------------------------------------------------------------------------- |
-| `WISHLIST_PORT`           | Host port, e.g. `8080`, or `127.0.0.1:8080` if a reverse proxy on the same host does HTTPS     |
-| `PUBLIC_URL`              | Public address, e.g. `https://wishlist.example.com` – used for link previews in messengers     |
-| `JWT_SECRET`              | **Required**, ≥ 32 characters. Changing it logs everybody out                                  |
-| `TRUST_PROXY`             | `1` = only the web container in front of the API, `2` = plus your HTTPS reverse proxy          |
-| `CORS_ORIGINS`            | Other origins allowed to call the API – `capacitor://localhost` for the iOS app                |
-| `IOS_APP_IDS`             | `<Team ID>.<bundle id>` of the iOS app that opens share links (`UJR28ZV94C.cx.hein.wishlist`)  |
-| `SCRAPER_ACCEPT_LANGUAGE` | Language requested from shops when reading product pages                                       |
-
-### Build and run locally
-
-```bash
-docker compose build          # builds the images locally (tagged :latest)
-docker compose up -d          # http://localhost:8080 (or whatever WISHLIST_PORT says)
-docker compose logs -f
-docker compose down           # stops the stack; data stays in the "wishlist_data" volume
-```
-
-### Publish images via GitHub
-
-[.github/workflows/docker.yml](.github/workflows/docker.yml) runs the tests and then builds both images for
-`linux/amd64` and `linux/arm64` whenever a version tag is pushed. Images go to the GitHub Container Registry
-(no secrets to set up – the workflow uses the built-in `GITHUB_TOKEN`).
-
-Release a version by tagging it ([semantic versioning](https://semver.org): `vMAJOR.MINOR.PATCH`):
-
-```bash
-git tag -a v1.1.0 -m "Release 1.1.0"
-git push origin v1.1.0
-```
-
-The workflow (see the repository's *Actions* tab) then publishes
-
-```
-ghcr.io/marchein/wishlist-api:1.1.0  :1.1  :1  :latest  :sha-<commit>
-ghcr.io/marchein/wishlist-web:1.1.0  :1.1  :1  :latest  :sha-<commit>
-```
-
-New packages are **private**. Either make them public ([your packages](https://github.com/marchein?tab=packages)
-→ package → *Package settings* → *Change visibility*) or log in on the server as shown below.
-
-<details>
-<summary>Building and pushing without GitHub Actions</summary>
-
-```bash
-echo <token> | docker login ghcr.io -u marchein --password-stdin   # classic PAT with write:packages
-# On Apple Silicon, build for a typical x86 server:
-DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose build
-docker compose push
-```
-
-</details>
-
-### Deploy on your server
-
-Requirements: Docker Engine with the Compose plugin. The server only needs `docker-compose.yml` and `.env` –
-no source code.
+Requires Docker Engine with the Compose plugin, a domain, and an HTTPS reverse proxy.
+The server only needs the Compose file and configuration, not the source code.
 
 ```bash
 mkdir -p ~/wishlist && cd ~/wishlist
 curl -fsSLO https://raw.githubusercontent.com/marchein/wishlist/main/docker-compose.yml
 curl -fsSL -o .env https://raw.githubusercontent.com/marchein/wishlist/main/.env.example
-nano .env                                 # PUBLIC_URL, JWT_SECRET, …
-# only for private packages: classic personal access token with the read:packages scope
-echo <token> | docker login ghcr.io -u marchein --password-stdin
+openssl rand -base64 48
+nano .env
+```
+
+Paste the generated secret into `JWT_SECRET` and set `PUBLIC_URL` to your actual HTTPS address.
+Never commit the real `.env`.
+
+| Setting | Purpose |
+| --- | --- |
+| `JWT_SECRET` | Required; at least 32 characters. Keep it stable: changing it signs everyone out. |
+| `PUBLIC_URL` | Public origin, e.g. `https://wishlist.example.com`; used in messenger previews. |
+| `WISHLIST_PORT` | Host binding; use `127.0.0.1:8080` with a reverse proxy on the same host. |
+| `TRUST_PROXY` | `2` for web container + HTTPS proxy; `1` when only the web container is in front of the API. |
+| `CORS_ORIGINS` | Additional allowed origins; include `capacitor://localhost` for the iOS app. |
+| `IOS_APP_IDS` | Apple Team ID + bundle ID for Universal Links; see [iOS](#ios-app). |
+| `SCRAPER_ACCEPT_LANGUAGE` | Language requested from shops when reading product pages. |
+
+If the GitHub container packages are private, first run `docker login ghcr.io -u YOUR_GITHUB_USERNAME`
+and enter a token with `read:packages` permission. Public packages do not require login.
+
+```bash
 docker compose pull
 docker compose up -d --no-build
-docker compose ps                         # both services should become "healthy"
+docker compose ps
+docker compose logs --tail=100
 ```
 
-**HTTPS:** put a reverse proxy in front of the stack and keep `WISHLIST_PORT=127.0.0.1:8080` and
-`TRUST_PROXY=2`. With [Caddy](https://caddyserver.com) (automatic Let's Encrypt certificates) the whole
-`Caddyfile` is:
+Both services should become healthy:
 
-```
+| Service | Image | Responsibility |
+| --- | --- | --- |
+| `web` | `ghcr.io/marchein/wishlist-web:latest` | Serves the frontend and proxies API requests; host port 8080. |
+| `api` | `ghcr.io/marchein/wishlist-api:latest` | Backend, SQLite database and uploads; not exposed directly. |
+
+For example, put this behind [Caddy](https://caddyserver.com), which handles HTTPS certificates:
+
+```caddyfile
 wishlist.example.com {
     reverse_proxy 127.0.0.1:8080
 }
 ```
 
-**Update** to the newest release:
+Open your public address and create an account. Check `/api/health` for backend health/version,
+or **App status** (`/status`) for the installed frontend version and connected backend version/address.
+
+For a local, non-HTTPS trial, set `WISHLIST_PORT=8080`, `PUBLIC_URL=http://localhost:8080`
+and `TRUST_PROXY=1`, then open `http://localhost:8080`.
+
+## Update or roll back
+
+Make a [backup](#back-up-and-restore) before upgrading. In the directory containing your deployed
+Compose file and `.env`:
 
 ```bash
-docker compose pull && docker compose up -d --no-build && docker image prune -f
+docker compose pull
+docker compose up -d --no-build
+docker compose ps
 ```
 
-**Rollback / pin a version:** replace `:latest` with e.g. `:1.0.0` in both `image:` lines of
-`docker-compose.yml` and run the same command. Switch back to `:latest` to follow new releases again.
+Then reload the web app and check **App status**. Updating the server does not update an installed
+native iOS app; rebuild or distribute the new iOS version separately.
 
-**Backup:** everything (database, uploads, nothing else) lives in the `wishlist_data` volume:
+- `latest` follows the newest tagged release.
+- To pin or roll back, change **both** image tags in [docker-compose.yml](docker-compose.yml)
+  to the same release, e.g. `:1.0.3`, then run the commands above.
+- Database migrations run automatically. Rolling back an image does not reverse migrations;
+  restore the matching pre-upgrade backup if an older release cannot use the upgraded database.
+- `docker compose down` stops the stack without deleting data. **Do not use `down -v`** unless
+  you intend to delete the database and uploaded images.
+
+## Command-line administration
+
+These are **local operator commands**, not public HTTP endpoints. Anyone able to run commands in the API
+container already has administrative access to the database. Run these from your deployment directory.
+
+### List every user and their wishlists
+
+```bash
+docker compose exec -T api node dist/admin-cli.js users
+```
+
+The JSON output includes each user's ID, email, display name and creation time, with all their wishlists
+(IDs, titles, descriptions, dates, item counts and timestamps). Users without wishlists have an empty
+array. Passwords, password hashes, login tokens, share tokens and purchase information are not included.
+Treat the output as personal data.
+
+### Reset a user's password
+
+```bash
+docker compose exec api node dist/admin-cli.js reset-password person@example.com
+```
+
+Enter the new password twice at the **hidden prompt**. Email lookup is case-insensitive.
+The password must have at least 8 characters and at most 72 UTF-8 bytes, just like registration.
+
+A successful reset:
+
+- Replaces the password hash and signs that user out on **all devices**.
+- Does not affect other users, wishlists, purchases or existing public share links.
+- Requires the user to log in again with their new password.
+
+For automation, supply exactly one password line through stdin from a protected secret source:
+
+```bash
+docker compose exec -T api node dist/admin-cli.js reset-password person@example.com --stdin < /secure/path/new-password.txt
+```
+
+The final newline is optional. Do not put passwords in command arguments, shell history or committed
+files. Protect and remove any temporary password file. Invalid input or an unknown user exits nonzero
+without changing the account. Interactive prompts require a TTY, so omit `-T` for interactive resets.
+
+```bash
+docker compose exec -T api node dist/admin-cli.js --help
+```
+
+For local development, the equivalent is `npm run admin --prefix backend -- users` or
+`npm run admin --prefix backend -- reset-password person@example.com`. The configured database must
+already exist; the CLI will not silently create an empty one.
+
+## Back up and restore
+
+The default Compose project stores the database and uploads in the **`wishlist_data`** volume.
+If you override the Compose project name, adjust the volume name below.
+
+Stop API writes while archiving the entire volume, including SQLite's WAL files:
 
 ```bash
 docker compose stop api
-docker run --rm -v wishlist_data:/data -v "$PWD":/backup alpine tar czf /backup/wishlist-$(date +%F).tgz -C /data .
+docker run --rm -v wishlist_data:/data:ro -v "$PWD:/backup" alpine \
+  tar czf /backup/wishlist-$(date +%F).tgz -C /data .
 docker compose start api
 ```
 
-Restore by extracting such an archive into the (empty) volume the same way with `tar xzf`.
+Keep the archive and a secure copy of `.env` off the server. They contain private data and secrets.
+If archiving fails, restart the API before troubleshooting.
 
-### iOS app
-
-[frontend/ios](frontend/ios) is a native Xcode project (Capacitor, bundle id `cx.hein.wishlist`) that wraps the
-same Ionic app. In the app, API calls and share links use `https://wishlist.hein.cx`
-(see [environment.prod.ts](frontend/src/environments/environment.prod.ts)).
-
-**Server:** the app runs as origin `capacitor://localhost`, so the server's `.env` needs
-`CORS_ORIGINS=capacitor://localhost` (then `docker compose up -d --no-build`).
-
-**Share links open the app** (Universal Links): with the app installed, tapping `https://wishlist.hein.cx/s/…`
-(e.g. in WhatsApp) opens the list in the app instead of Safari. This needs
-
-- `IOS_APP_IDS=UJR28ZV94C.cx.hein.wishlist` in the server's `.env` – the server then publishes
-  `https://wishlist.hein.cx/.well-known/apple-app-site-association`;
-- the *Associated Domains* entitlement `applinks:wishlist.hein.cx`, already set in
-  [App.entitlements](frontend/ios/App/App/App.entitlements) (requires a paid Apple Developer account).
-
-iOS fetches the association file via Apple's CDN when the app is installed, so after changing it reinstall the
-app (the CDN can take a while to refresh). Check what Apple sees with
-`curl https://app-site-association.cdn-apple.com/a/v1/wishlist.hein.cx`.
-
-**Build and run** (requires Xcode):
+To restore, stop the API, prepare an **empty** data volume, and extract the chosen archive:
 
 ```bash
-cd frontend
-npm run ios        # production build → copy into the Xcode project → open Xcode
-npm run ios:sync   # after web code changes: rebuild and copy, then press Run in Xcode again
+docker run --rm -v wishlist_data:/data -v "$PWD:/backup:ro" alpine \
+  tar xzf /backup/wishlist-YYYY-MM-DD.tgz -C /data
+docker compose start api
 ```
 
-In Xcode select your team under *Signing & Capabilities*, pick a simulator or your iPhone and press Run.
-For TestFlight / the App Store use *Product → Archive* (needs an Apple Developer account). The app version is
-set in Xcode (*General → Version*), the icon in `ios/App/App/Assets.xcassets/AppIcon.appiconset`.
+Verify health, account access and uploads after restoring. Do not extract an old backup over a live database.
+
+## Development and contributing
+
+Requires **Node 24** and npm; `.nvmrc` selects the supported version.
+
+```bash
+git clone https://github.com/marchein/wishlist.git
+cd wishlist
+nvm install
+nvm use
+npm run install:all
+npm run dev
+```
+
+The frontend runs on `http://localhost:4200`, the API on `http://localhost:3000`.
+Backend configuration is in [backend/.env.example](backend/.env.example). Development data, uploads
+and an automatically generated JWT secret live under `backend/data/` by default.
+
+```text
+backend/src/       Express API, SQLite migrations, scraper, administration CLI and tests
+frontend/src/      Ionic + Angular web app
+frontend/ios/      Capacitor iOS project
+scripts/           Package-version synchronization and release checks
+```
+
+Before opening a pull request:
+
+```bash
+npm test
+npm run lint --prefix frontend
+npm run build
+```
+
+`npm test` covers version synchronization, generated icon content, frontend behavior, API behavior,
+CLI subprocesses, password validation, session revocation and database migration compatibility.
+Tests use temporary databases, not development or production data.
+
+- Branch from `main`, keep changes focused, add regression tests, and describe user-visible changes in the PR.
+- Keep English and German translations aligned.
+- Preserve existing `/s/<token>` links and owner-only editing. Never expose purchase data to authenticated owners.
+- Append database migrations; never edit a migration that has already shipped.
+- Update this README when operational commands or deployment behavior change.
+- Do not commit credentials, real databases, uploads, backups or exported user information.
+
+### Change app artwork
+
+The original source is [app-icon.svg](frontend/src/assets/icon/app-icon.svg). After editing it:
+
+```bash
+npm run icons:generate --prefix frontend
+npm run test:icons --prefix frontend
+```
+
+Commit the regenerated web icons, native app icon and launch logos together with the source.
+Generation uses the development dependency `sharp`; no system image tools are needed.
+The tests check dimensions, opacity and actual visible artwork, not just file existence.
+
+To test the complete stack from source:
+
+```bash
+cp .env.example .env
+# Configure .env as described in the deployment section.
+docker compose build
+docker compose up -d --no-build
+```
+
+## Build and publish on GitHub
+
+The [Docker images workflow](.github/workflows/docker.yml) tests the app and publishes backend and
+frontend images for `linux/amd64` and `linux/arm64` when a `vMAJOR.MINOR.PATCH` tag is pushed.
+It uses the built-in `GITHUB_TOKEN` with package-write permission; no registry secret is needed.
+
+After committing the changes intended for the release, prepare the next version:
+
+```bash
+npm version 1.0.4 --no-git-tag-version
+npm run version:check -- v1.0.4
+npm test
+npm run lint --prefix frontend
+npm run build
+git add package.json package-lock.json backend/package.json backend/package-lock.json frontend/package.json frontend/package-lock.json
+git commit -m "Release 1.0.4"
+git tag -a v1.0.4 -m "Release 1.0.4"
+git push origin main
+git push origin v1.0.4
+```
+
+The root `npm version` hook synchronizes **all package manifests and lockfiles**. CI rejects a tag
+that does not match them. Both the frontend and backend report their own package version.
+
+In GitHub, watch **Actions → Docker images**. A successful tagged run publishes:
+
+```text
+ghcr.io/marchein/wishlist-api:1.0.4  :1.0  :1  :latest  :sha-<commit>
+ghcr.io/marchein/wishlist-web:1.0.4  :1.0  :1  :latest  :sha-<commit>
+```
+
+New GHCR packages may be private. Make them public in their package settings or authenticate on the
+deployment host as described above. For forks, the workflow uses your repository's image names;
+update the Compose image names accordingly.
+
+For an untagged preview build, use **Actions → Docker images → Run workflow** on the desired branch.
+Manual runs publish `sha-<commit>` images but **do not update `latest`**. Pin both Compose images to
+that SHA tag to test them. Use a new version/tag for a release; do not move an existing release tag.
+
+## iOS app
+
+Requires macOS, Xcode, and an Apple Developer team for device distribution.
+
+```bash
+npm run ios --prefix frontend       # production web build, Capacitor sync, open Xcode
+npm run ios:sync --prefix frontend  # after web changes: rebuild and sync, then Run again in Xcode
+```
+
+Select your team under **Signing & Capabilities**, choose a simulator or device, and press Run.
+For TestFlight/App Store distribution, set the version/build in Xcode and use **Product → Archive**.
+The native icon and launch screen are included in [frontend/ios](frontend/ios).
+
+The production native app connects to `https://wishlist.hein.cx`, configured in
+[environment.prod.ts](frontend/src/environments/environment.prod.ts). For your own server, change
+that address and set `CORS_ORIGINS=capacitor://localhost` on the backend.
+
+Universal Links also require:
+
+- `IOS_APP_IDS=<AppleTeamID>.cx.hein.wishlist` on the server.
+- An `applinks:your-domain` entry in [App.entitlements](frontend/ios/App/App/App.entitlements).
+- A publicly reachable `https://your-domain/.well-known/apple-app-site-association`.
+
+The repository's deployment uses `UJR28ZV94C.cx.hein.wishlist`. Apple's CDN caches the association
+file; after changing it, allow time to refresh and reinstall the app.
+
+## Sharing and privacy
+
+`/s/<token>` is the normal wishlist address for both owners and recipients: copying the browser
+address works. Owners get editing controls; others can mark quantities as bought and undo purchases.
+The logged-in owner's API responses omit purchase information, even through the shared address.
+
+Anyone with a share link can access its recipient view without an account. Treat it as a bearer link.
+Explicitly regenerating the link or deleting the list invalidates that link; ordinary edits, upgrades
+and password resets do not.
+
+Shop-link import supports common product metadata, with manual entry when a shop blocks access.
+Messenger previews include list details and an image, never purchase information.

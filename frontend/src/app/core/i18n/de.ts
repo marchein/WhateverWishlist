@@ -2,9 +2,18 @@ import type { Translations } from './en';
 
 export const de: Translations = {
   'app.title': 'WhateverWishlist',
+  'status.title': 'App-Status',
+  'status.frontend': 'Auf diesem Gerät installierte Frontend-Version',
+  'status.backend': 'Version des verbundenen Backends',
+  'status.address': 'Backend-API-Adresse',
+  'status.checking': 'Backend wird geprüft',
+  'status.unreachable': 'Das Backend konnte nicht erreicht werden. Bitte erneut versuchen.',
+  'status.notReported': 'Dieses Backend meldet seine Version noch nicht.',
+  'status.refresh': 'Erneut prüfen',
 
   'common.back': 'Zurück',
   'common.cancel': 'Abbrechen',
+  'common.close': 'Schließen',
   'common.save': 'Speichern',
   'common.delete': 'Löschen',
   'common.login': 'Anmelden',
@@ -39,9 +48,13 @@ export const de: Translations = {
   'wishlists.create': 'Erstellen',
 
   'detail.share': 'Teilen',
+  'detail.shareDialogTitle': 'Wunschliste teilen',
+  'detail.publicLink': 'Teilen-Link',
+  'detail.systemShare': 'Weitere Teilen-Optionen',
+  'detail.ownerHint': 'Deine Wunschliste. Hier kannst du Wünsche bearbeiten; Käufe bleiben für dich verborgen.',
   'detail.more': 'Mehr',
   'detail.shareHint':
-    'Teile diesen Link mit Familie und Freunden. Sie können Wünsche als gekauft markieren – du siehst nicht, was schon gekauft wurde.',
+    'Alle mit diesem Link können deine Wunschliste ohne Konto öffnen und Wünsche als gekauft markieren. Käufe bleiben für dich verborgen.',
   'detail.copyLink': 'Link kopieren',
   'detail.emptyText': 'Füge einen Link aus einem beliebigen Shop ein – wir übernehmen die Details für dich.',
   'detail.addFirst': 'Ersten Wunsch hinzufügen',
@@ -51,7 +64,6 @@ export const de: Translations = {
   'detail.linkCopied': 'Link kopiert – schick ihn an Familie und Freunde!',
   'detail.copyFailed': 'Der Link konnte nicht kopiert werden. Bitte kopiere ihn manuell.',
   'detail.menu.edit': 'Listendetails bearbeiten',
-  'detail.menu.preview': 'Ansicht für andere anzeigen',
   'detail.menu.regenerate': 'Neuen Teilen-Link erstellen',
   'detail.menu.delete': 'Liste löschen',
   'detail.edit.header': 'Liste bearbeiten',
