@@ -58,11 +58,11 @@ it('rejects an out-of-sync lockfile root package version', () => {
   assert.notEqual(run('--check', 'v1.0.3').status, 0);
 });
 
-it('synchronizes all packages and locks through the root npm version lifecycle', () => {
-  const bump = spawnSync('npm', ['version', '1.0.4', '--no-git-tag-version'], {
+it('synchronizes all packages and locks for a minor release through the root npm version lifecycle', () => {
+  const bump = spawnSync('npm', ['version', '1.1.0', '--no-git-tag-version'], {
     cwd: root, encoding: 'utf8',
   });
   assert.equal(bump.status, 0, bump.stderr);
-  const check = run('--check', 'v1.0.4');
+  const check = run('--check', 'v1.1.0');
   assert.equal(check.status, 0, check.stderr);
 });
