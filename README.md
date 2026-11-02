@@ -169,6 +169,13 @@ Verify health, account access and uploads after restoring. Do not extract an old
 
 Requires **Node 24** and npm; `.nvmrc` selects the supported version.
 
+Frontend TypeScript stays on the latest 6.0.x release because Angular 22,
+Ionic's Angular toolkit and typescript-eslint do not yet support TypeScript 7.
+The backend uses TypeScript 7 independently.
+
+Stop the development server before installing or updating dependencies, then restart
+`npm run dev`. A running Angular watcher can retain stale package metadata after an update.
+
 ```bash
 git clone https://github.com/marchein/wishlist.git
 cd wishlist
@@ -201,6 +208,11 @@ npm run build
 CLI subprocesses, password validation, session revocation and database migration compatibility.
 Tests use temporary databases, not development or production data.
 
+Frontend development-tool dependencies `glob` and `minimatch` are pinned through npm overrides
+to patched releases for GHSA-3g3m-2fjr-6pw4 and GHSA-g3hv-75wg-m249. These cross-major overrides
+are validated with tests, lint, builds and Capacitor sync; remove them once upstream tools
+request patched versions themselves.
+
 - Branch from `main`, keep changes focused, add regression tests, and describe user-visible changes in the PR.
 - Keep English and German translations aligned.
 - Preserve existing `/s/<token>` links and owner-only editing. Never expose purchase data to authenticated owners.
@@ -232,8 +244,10 @@ docker compose up -d --no-build
 
 ## Build and publish on GitHub
 
-The [Docker images workflow](.github/workflows/docker.yml) tests the app and publishes backend and
-frontend images for `linux/amd64` and `linux/arm64` when a `vMAJOR.MINOR.PATCH` tag is pushed.
+The [Docker images workflow](.github/workflows/docker.yml) runs tests, frontend lint, production
+builds and a development frontend build on every branch push and pull request.
+It publishes backend and frontend images for `linux/amd64` and `linux/arm64` only when a
+`vMAJOR.MINOR.PATCH` tag is pushed or the workflow is run manually.
 It uses the built-in `GITHUB_TOKEN` with package-write permission; no registry secret is needed.
 
 After committing the changes intended for the release, prepare the next version:
