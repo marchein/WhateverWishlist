@@ -42,6 +42,8 @@ export const en = {
   'wishlists.createFirst': 'Create my first wishlist',
   'wishlists.wishCount': { one: '{count} wish', other: '{count} wishes' },
   'wishlists.new': 'New wishlist',
+  'wishlists.createHint': 'Give your list a name. You can add an event date too.',
+  'wishlists.titleRequired': 'Please enter a title of up to 120 characters.',
   'wishlists.titlePlaceholder': 'e.g. Christmas 2026',
   'wishlists.dateOptional': 'Date (optional)',
   'wishlists.create': 'Create',

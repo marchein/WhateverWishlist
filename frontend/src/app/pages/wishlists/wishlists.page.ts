@@ -1,7 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, viewChild } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
-  AlertController,
   IonButton,
   IonButtons,
   IonContent,
@@ -12,6 +12,7 @@ import {
   IonItem,
   IonLabel,
   IonList,
+  IonModal,
   IonRefresher,
   IonRefresherContent,
   IonRouterLink,
@@ -34,6 +35,7 @@ import { NotifyService } from '../../core/ui';
   templateUrl: 'wishlists.page.html',
   styleUrls: ['wishlists.page.scss'],
   imports: [
+    ReactiveFormsModule,
     LanguageSwitchComponent,
     LocalDatePipe,
     TranslatePipe,
@@ -49,6 +51,7 @@ import { NotifyService } from '../../core/ui';
     IonRefresher,
     IonRefresherContent,
     IonList,
+    IonModal,
     IonItem,
     IonLabel,
     IonSpinner,
@@ -58,14 +61,25 @@ import { NotifyService } from '../../core/ui';
 })
 export class WishlistsPage implements ViewWillEnter {
   private readonly api = inject(ApiService);
-  private readonly alerts = inject(AlertController);
   private readonly nav = inject(NavController);
   private readonly notify = inject(NotifyService);
   protected readonly auth = inject(AuthService);
   private readonly i18n = inject(I18nService);
+  private readonly createModal = viewChild.required(IonModal);
 
   readonly wishlists = signal<Wishlist[]>([]);
   readonly loading = signal(true);
+  readonly creating = signal(false);
+  readonly saving = signal(false);
+  readonly canDismissCreation = async (_data?: unknown, role?: string): Promise<boolean> =>
+    role === 'confirm' || !this.saving();
+  readonly form = new FormGroup({
+    title: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(120), Validators.pattern(/\S/)],
+    }),
+    eventDate: new FormControl('', { nonNullable: true }),
+  });
 
   ionViewWillEnter(): void {
     void this.load();
@@ -82,32 +96,34 @@ export class WishlistsPage implements ViewWillEnter {
     }
   }
 
-  async create(): Promise<void> {
-    const alert = await this.alerts.create({
-      header: this.i18n.t('wishlists.new'),
-      inputs: [
-        { name: 'title', placeholder: this.i18n.t('wishlists.titlePlaceholder'), attributes: { maxlength: 120 } },
-        { name: 'eventDate', type: 'date', label: this.i18n.t('wishlists.dateOptional') },
-      ],
-      buttons: [
-        { text: this.i18n.t('common.cancel'), role: 'cancel' },
-        { text: this.i18n.t('wishlists.create'), role: 'confirm' },
-      ],
-    });
-    await alert.present();
-    const { role, data } = await alert.onDidDismiss<{ values: { title: string; eventDate: string } }>();
-    const title = data?.values.title?.trim();
-    if (role !== 'confirm' || !title) return;
+  create(): void {
+    this.form.reset();
+    this.creating.set(true);
+  }
 
+  async submit(): Promise<void> {
+    if (this.saving()) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      await this.notify.error(this.i18n.t('wishlists.titleRequired'));
+      return;
+    }
+
+    const { title, eventDate } = this.form.getRawValue();
+    this.saving.set(true);
     try {
       const wishlist = await this.api.createWishlist({
-        title,
+        title: title.trim(),
         description: null,
-        eventDate: data?.values.eventDate || null,
+        eventDate: eventDate || null,
       });
+      await this.createModal().dismiss(undefined, 'confirm');
+      this.creating.set(false);
       await this.nav.navigateForward(['/s', wishlist.shareToken]);
     } catch (error) {
       await this.notify.error(error);
+    } finally {
+      this.saving.set(false);
     }
   }
 

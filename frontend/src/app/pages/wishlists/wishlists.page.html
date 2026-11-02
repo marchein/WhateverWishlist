@@ -50,9 +50,52 @@
 
   <app-language-switch />
 
-  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+  <ion-fab class="wishlist-fab" slot="fixed" vertical="bottom" horizontal="end">
     <ion-fab-button (click)="create()" [title]="'wishlists.new' | t">
       <ion-icon name="add" />
     </ion-fab-button>
   </ion-fab>
 </ion-content>
+
+<ion-modal
+  class="create-dialog"
+  [isOpen]="creating()"
+  [canDismiss]="canDismissCreation"
+  (didDismiss)="creating.set(false)"
+  [attr.aria-label]="'wishlists.new' | t"
+>
+  <ng-template>
+    <form class="create-form" [formGroup]="form" (ngSubmit)="submit()">
+      <h2>{{ 'wishlists.new' | t }}</h2>
+      <p>{{ 'wishlists.createHint' | t }}</p>
+
+      <label for="wishlist-title">{{ 'detail.edit.title' | t }}</label>
+      <input
+        id="wishlist-title"
+        formControlName="title"
+        type="text"
+        maxlength="120"
+        enterkeyhint="next"
+        [placeholder]="'wishlists.titlePlaceholder' | t"
+        [attr.aria-invalid]="form.controls.title.touched && form.controls.title.invalid"
+        [readonly]="saving()"
+      />
+
+      <label for="wishlist-date">{{ 'wishlists.dateOptional' | t }}</label>
+      <input id="wishlist-date" formControlName="eventDate" type="date" [readonly]="saving()" />
+
+      <div class="create-actions">
+        <ion-button fill="outline" type="button" [disabled]="saving()" (click)="creating.set(false)">
+          {{ 'common.cancel' | t }}
+        </ion-button>
+        <ion-button type="submit" [disabled]="form.invalid || saving()">
+          @if (saving()) {
+            <ion-spinner name="dots" />
+          } @else {
+            {{ 'wishlists.create' | t }}
+          }
+        </ion-button>
+      </div>
+    </form>
+  </ng-template>
+</ion-modal>

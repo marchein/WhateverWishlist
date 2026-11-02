@@ -5,10 +5,6 @@
     </ion-buttons>
     <ion-title>{{ wishlist()?.title }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="share()" [disabled]="!wishlist()">
-        <ion-icon slot="start" name="share-social-outline" />
-        {{ 'detail.share' | t }}
-      </ion-button>
       <ion-button (click)="openMenu()" [disabled]="!wishlist()" [title]="'detail.more' | t" [attr.aria-label]="'detail.more' | t">
         <ion-icon slot="icon-only" name="ellipsis-vertical" />
       </ion-button>
@@ -96,7 +92,7 @@
     <div class="empty"><ion-spinner /></div>
   }
 
-  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+  <ion-fab class="wishlist-fab" slot="fixed" vertical="bottom" horizontal="end">
     <ion-fab-button (click)="openEditor()" [title]="'detail.addWish' | t">
       <ion-icon name="add" />
     </ion-fab-button>
