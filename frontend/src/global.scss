@@ -35,3 +35,15 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
+
+ion-fab.wishlist-fab {
+  --fab-edge-gap: max(24px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px), env(safe-area-inset-bottom, 0px));
+}
+
+ion-fab.wishlist-fab.fab-horizontal-end {
+  right: var(--fab-edge-gap);
+}
+
+ion-fab.wishlist-fab.fab-vertical-bottom {
+  bottom: var(--fab-edge-gap);
+}

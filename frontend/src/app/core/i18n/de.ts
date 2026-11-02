@@ -43,6 +43,8 @@ export const de: Translations = {
   'wishlists.createFirst': 'Meine erste Wunschliste erstellen',
   'wishlists.wishCount': { one: '{count} Wunsch', other: '{count} Wünsche' },
   'wishlists.new': 'Neue Wunschliste',
+  'wishlists.createHint': 'Gib deiner Liste einen Namen. Ein Datum kannst du optional hinzufügen.',
+  'wishlists.titleRequired': 'Bitte gib einen Titel mit bis zu 120 Zeichen ein.',
   'wishlists.titlePlaceholder': 'z. B. Weihnachten 2026',
   'wishlists.dateOptional': 'Datum (optional)',
   'wishlists.create': 'Erstellen',

@@ -1,0 +1,133 @@
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
+import { IonModal, NavController } from '@ionic/angular';
+import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
+import { I18nService } from '../../core/i18n/i18n';
+import { NotifyService } from '../../core/ui';
+import { WishlistsPage } from './wishlists.page';
+
+describe('Wishlist creation form', () => {
+  const createWishlist = vi.fn();
+  const navigateForward = vi.fn();
+  const error = vi.fn();
+
+  beforeEach(() => {
+    createWishlist.mockReset().mockResolvedValue({ shareToken: 'new-token' });
+    navigateForward.mockReset();
+    error.mockReset();
+    TestBed.configureTestingModule({
+      imports: [WishlistsPage],
+      providers: [
+        provideRouter([]),
+        { provide: ApiService, useValue: { createWishlist } },
+        { provide: AuthService, useValue: { user: () => null } },
+        { provide: NavController, useValue: { navigateForward } },
+        { provide: NotifyService, useValue: { error } },
+      ],
+    });
+    TestBed.inject(I18nService).setLanguage('en');
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('wishlist.language');
+  });
+
+  function createPage() {
+    const fixture = TestBed.createComponent(WishlistsPage);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('renders persistent labels for both fields, including the native date input', async () => {
+    const fixture = createPage();
+    fixture.componentInstance.create();
+    fixture.detectChanges();
+    const modal = fixture.debugElement.query(By.directive(IonModal)).componentInstance as IonModal;
+    await modal.present();
+    fixture.detectChanges();
+    const title = document.querySelector<HTMLLabelElement>('label[for="wishlist-title"]');
+    const date = document.querySelector<HTMLLabelElement>('label[for="wishlist-date"]');
+    expect(title?.textContent).toBe('Title');
+    expect(date?.textContent).toBe('Date (optional)');
+    expect(date?.control?.getAttribute('type')).toBe('date');
+    expect(document.querySelector('ion-alert')).toBeNull();
+    await modal.dismiss();
+  });
+
+  it('creates a list with a trimmed title and an optional date, then navigates to it', async () => {
+    const fixture = createPage();
+    const page = fixture.componentInstance;
+    page.create();
+    fixture.detectChanges();
+    const modal = fixture.debugElement.query(By.directive(IonModal)).componentInstance as IonModal;
+    await modal.present();
+    const dismiss = vi.spyOn(modal, 'dismiss');
+    navigateForward.mockImplementationOnce(() => {
+      expect(document.querySelector('ion-modal.show-modal')).toBeNull();
+    });
+    page.form.setValue({ title: '  Birthday  ', eventDate: '2027-01-06' });
+    await page.submit();
+    expect(createWishlist).toHaveBeenCalledWith({
+      title: 'Birthday', description: null, eventDate: '2027-01-06',
+    });
+    expect(navigateForward).toHaveBeenCalledWith(['/s', 'new-token']);
+    expect(dismiss).toHaveBeenCalledWith(undefined, 'confirm');
+    expect(page.creating()).toBe(false);
+    expect(page.saving()).toBe(false);
+  });
+
+  it('sends null for an omitted date and resets fields when opening a new form', async () => {
+    const page = createPage().componentInstance;
+    page.create();
+    page.form.controls.title.setValue('Christmas');
+    await page.submit();
+    expect(createWishlist).toHaveBeenCalledWith({
+      title: 'Christmas', description: null, eventDate: null,
+    });
+    page.create();
+    expect(page.form.getRawValue()).toEqual({ title: '', eventDate: '' });
+  });
+
+  it('rejects whitespace-only and overlong titles with an explicit error', async () => {
+    const page = createPage().componentInstance;
+    for (const title of ['   ', 'x'.repeat(121)]) {
+      page.form.controls.title.setValue(title);
+      await page.submit();
+    }
+    expect(createWishlist).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps entered values and the form open after an API failure', async () => {
+    const failure = new Error('Offline');
+    createWishlist.mockRejectedValue(failure);
+    const page = createPage().componentInstance;
+    page.create();
+    page.form.controls.title.setValue('Birthday');
+    await page.submit();
+    expect(error).toHaveBeenCalledWith(failure);
+    expect(page.creating()).toBe(true);
+    expect(page.form.controls.title.value).toBe('Birthday');
+    expect(page.saving()).toBe(false);
+    expect(navigateForward).not.toHaveBeenCalled();
+  });
+
+  it('prevents duplicate submissions while saving', async () => {
+    let finish!: (value: { shareToken: string }) => void;
+    createWishlist.mockReturnValue(new Promise<{ shareToken: string }>((resolve) => { finish = resolve; }));
+    const page = createPage().componentInstance;
+    page.create();
+    page.form.controls.title.setValue('Birthday');
+    const submission = page.submit();
+    await page.submit();
+    expect(createWishlist).toHaveBeenCalledTimes(1);
+    expect(page.saving()).toBe(true);
+    expect(await page.canDismissCreation()).toBe(false);
+    expect(await page.canDismissCreation(undefined, 'confirm')).toBe(true);
+    finish({ shareToken: 'new-token' });
+    await submission;
+    expect(page.saving()).toBe(false);
+  });
+});

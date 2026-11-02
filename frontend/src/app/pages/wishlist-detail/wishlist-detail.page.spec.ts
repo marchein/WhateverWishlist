@@ -109,18 +109,18 @@ describe('Owner editing at the canonical share address', () => {
     expect(systemShare).not.toHaveBeenCalled();
   });
 
-  it('wires the visible Share button to an actual modal in the template', async () => {
+  it('keeps sharing in the inline panel without a duplicate navigation-bar button', async () => {
     const fixture = await createEditor(true);
-    const button = fixture.debugElement.queryAll(By.directive(IonButton))
+    const headerButtons = fixture.debugElement.queryAll(By.css('ion-header ion-button'));
+    expect(headerButtons.map((element) => element.nativeElement.textContent.trim())).not.toContain('Share');
+    const button = fixture.debugElement.queryAll(By.css('.share-panel ion-button'))
       .find((element) => element.nativeElement.textContent.trim() === 'Share');
     expect(button).toBeDefined();
     button!.triggerEventHandler('click');
-    fixture.detectChanges();
-    const modal = fixture.debugElement.query(By.directive(IonModal));
-    expect(modal).not.toBeNull();
-    expect(modal.componentInstance.isOpen).toBe(true);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.sharing()).toBe(false);
     expect(writeText).not.toHaveBeenCalled();
-    expect(systemShare).not.toHaveBeenCalled();
+    expect(systemShare).toHaveBeenCalledWith(expect.objectContaining({ url: fixture.componentInstance.shareUrl() }));
   });
 
   it('displays the canonical link inline with Copy and a supported system Share button', async () => {
