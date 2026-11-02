@@ -19,12 +19,18 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
+      - name: Verify package versions match the release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: npm run version:check -- "$RELEASE_TAG"
+      - name: Version synchronization tests
+        run: npm run test:version
       - name: Backend tests
         working-directory: backend
         run: npm ci --ignore-scripts && npm test
       - name: Frontend tests
         working-directory: frontend
-        run: npm ci --ignore-scripts && npx ng test --watch=false
+        run: npm ci --ignore-scripts && npm run test:icons && npx ng test --watch=false
 
   publish:
     needs: test

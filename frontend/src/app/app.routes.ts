@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.interceptor';
+import { legacyWishlistRedirect } from './core/wishlist-navigation';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'wishlists', pathMatch: 'full' },
@@ -14,9 +15,18 @@ export const routes: Routes = [
   },
   {
     path: 'wishlists/:id',
-    canActivate: [authGuard],
+    canActivate: [authGuard, legacyWishlistRedirect],
+    children: [],
+  },
+  {
+    path: 'manage/wishlist',
+    canActivate: [authGuard, legacyWishlistRedirect],
+    children: [],
+  },
+  {
+    path: 'status',
     loadComponent: () =>
-      import('./pages/wishlist-detail/wishlist-detail.page').then((m) => m.WishlistDetailPage),
+      import('./pages/status/status.page').then((m) => m.StatusPage),
   },
   {
     // Public share link – works for guests and registered users alike.

@@ -1,13 +1,16 @@
 import { Component, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import {
   IonButton,
+  IonButtons,
   IonContent,
   IonHeader,
   IonIcon,
   IonInput,
   IonLabel,
   IonList,
+  IonRouterLink,
   IonSegment,
   IonSegmentButton,
   IonSpinner,
@@ -26,6 +29,8 @@ import { NotifyService } from '../../core/ui';
   styleUrls: ['login.page.scss'],
   imports: [
     ReactiveFormsModule,
+    RouterLink,
+    IonRouterLink,
     TranslatePipe,
     LanguageSwitchComponent,
     IonHeader,
@@ -38,6 +43,7 @@ import { NotifyService } from '../../core/ui';
     IonList,
     IonInput,
     IonButton,
+    IonButtons,
     IonIcon,
     IonSpinner,
   ],

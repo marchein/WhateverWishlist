@@ -5,10 +5,11 @@
     </ion-buttons>
     <ion-title>{{ wishlist()?.title }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="share()" [title]="'detail.share' | t">
-        <ion-icon slot="icon-only" name="share-social-outline" />
+      <ion-button (click)="share()" [disabled]="!wishlist()">
+        <ion-icon slot="start" name="share-social-outline" />
+        {{ 'detail.share' | t }}
       </ion-button>
-      <ion-button (click)="openMenu()" [title]="'detail.more' | t">
+      <ion-button (click)="openMenu()" [disabled]="!wishlist()" [title]="'detail.more' | t" [attr.aria-label]="'detail.more' | t">
         <ion-icon slot="icon-only" name="ellipsis-vertical" />
       </ion-button>
     </ion-buttons>
@@ -17,6 +18,31 @@
 
 <ion-content>
   @if (wishlist(); as w) {
+    <p class="owner-hint ion-padding-horizontal">
+      <ion-icon name="eye-off-outline" />
+      {{ 'detail.ownerHint' | t }}
+    </p>
+    <section class="share-panel ion-margin-horizontal" [attr.aria-label]="'detail.publicLink' | t">
+      <ion-input
+        fill="outline"
+        labelPlacement="stacked"
+        [label]="'detail.publicLink' | t"
+        [value]="shareUrl()"
+        [readonly]="true"
+      />
+      <div class="share-panel-actions">
+        <ion-button fill="outline" (click)="copyLink()">
+          <ion-icon slot="start" name="copy-outline" />
+          {{ 'detail.copyLink' | t }}
+        </ion-button>
+        @if (systemSharingAvailable) {
+          <ion-button (click)="shareUsingDevice()">
+            <ion-icon slot="start" name="share-social-outline" />
+            {{ 'detail.share' | t }}
+          </ion-button>
+        }
+      </div>
+    </section>
     @if (w.description || w.eventDate) {
       <div class="ion-padding-horizontal details">
         @if (w.eventDate) {
@@ -27,21 +53,6 @@
         }
       </div>
     }
-
-    <ion-card class="share">
-      <ion-card-content>
-        <p>
-          <ion-icon name="eye-off-outline" />
-          {{ 'detail.shareHint' | t }}
-        </p>
-        <div class="link">
-          <code>{{ shareUrl() }}</code>
-          <ion-button size="small" fill="clear" (click)="copyLink()" [attr.aria-label]="'detail.copyLink' | t">
-            <ion-icon slot="icon-only" name="copy-outline" />
-          </ion-button>
-        </div>
-      </ion-card-content>
-    </ion-card>
 
     @if (w.items.length === 0) {
       <div class="empty">
@@ -91,3 +102,43 @@
     </ion-fab-button>
   </ion-fab>
 </ion-content>
+
+<ion-modal
+  class="share-dialog"
+  [isOpen]="sharing()"
+  (didDismiss)="sharing.set(false)"
+  [attr.aria-label]="'detail.shareDialogTitle' | t"
+>
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>{{ 'detail.shareDialogTitle' | t }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="sharing.set(false)" [attr.aria-label]="'common.close' | t">
+            <ion-icon slot="icon-only" name="close" />
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <p class="share-hint">{{ 'detail.shareHint' | t }}</p>
+      <ion-input
+        fill="outline"
+        labelPlacement="stacked"
+        [label]="'detail.publicLink' | t"
+        [value]="shareUrl()"
+        [readonly]="true"
+      />
+      <ion-button class="share-action" expand="block" (click)="copyLink()">
+        <ion-icon slot="start" name="copy-outline" />
+        {{ 'detail.copyLink' | t }}
+      </ion-button>
+      @if (systemSharingAvailable) {
+        <ion-button expand="block" fill="outline" (click)="shareUsingDevice()">
+          <ion-icon slot="start" name="share-social-outline" />
+          {{ 'detail.systemShare' | t }}
+        </ion-button>
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>

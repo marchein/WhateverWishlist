@@ -2,30 +2,53 @@
   margin: 8px 0;
 }
 
-.share {
-  p {
-    display: flex;
-    gap: 8px;
-    margin: 0;
-  }
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 
-  ion-icon {
-    flex: 0 0 auto;
-    font-size: 20px;
-  }
+.owner-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ion-color-medium);
+  font-size: 0.875rem;
+}
 
-  .link {
-    display: flex;
-    align-items: center;
-    margin-top: 8px;
+.share-dialog {
+  --width: calc(100% - 32px);
+  --max-width: 480px;
+  --height: 360px;
+  --max-height: 90%;
+  --border-radius: 12px;
+}
 
-    code {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+.share-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  ion-input {
+    flex: 1 1 260px;
+    min-width: 0;
   }
+}
+
+.share-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.share-hint {
+  margin: 0 0 20px;
+}
+
+.share-action {
+  margin-top: 20px;
 }
 
 ion-thumbnail {

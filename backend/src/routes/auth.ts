@@ -23,6 +23,7 @@ export function authRouter(db: DB): Router {
       email: input.email,
       display_name: input.displayName,
       password_hash: await bcrypt.hash(input.password, 12),
+      session_version: 0,
       created_at: now(),
     };
     db.prepare(
@@ -39,7 +40,7 @@ export function authRouter(db: DB): Router {
     const valid = await bcrypt.compare(input.password, user?.password_hash ?? DUMMY_HASH);
     if (!user || !valid) throw new HttpError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
 
-    res.json({ token: signToken(user.id), user: toUserDto(user) });
+    res.json({ token: signToken(user.id, user.session_version), user: toUserDto(user) });
   });
 
   router.get('/me', requireAuth(db), (req, res) => {

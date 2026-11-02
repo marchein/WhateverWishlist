@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>WhateverWishlist - a gift full of wishes</title>
+  <defs>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#7560eb"/>
+      <stop offset="1" stop-color="#4935b5"/>
+    </linearGradient>
+  </defs>
+  <rect id="background" width="1024" height="1024" fill="url(#purple)"/>
+  <path d="M512 387C461 284 349 267 337 325C325 385 427 393 512 387Z" fill="none" stroke="#ffffff" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M512 387C563 284 675 267 687 325C699 385 597 393 512 387Z" fill="none" stroke="#ffffff" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="260" y="406" width="504" height="116" rx="26" fill="none" stroke="#ffffff" stroke-width="48"/>
+  <path d="M292 530V737Q292 769 324 769H700Q732 769 732 737V530" fill="none" stroke="#ffffff" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M512 413V759" fill="none" stroke="#ffffff" stroke-width="48" stroke-linecap="round"/>
+  <path d="M805 166L826 222L882 243L826 264L805 320L784 264L728 243L784 222Z" fill="#ffd47a"/>
+  <circle cx="208" cy="698" r="20" fill="#c6bcff"/>
+</svg>

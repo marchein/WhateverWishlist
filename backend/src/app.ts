@@ -11,6 +11,7 @@ import { sharedRouter } from './routes/shared.js';
 import { uploadsRouter } from './routes/uploads.js';
 import { wellKnownRouter } from './routes/well-known.js';
 import { wishlistsRouter } from './routes/wishlists.js';
+import { version } from './version.js';
 
 export function createApp(db: DB) {
   const app = express();
@@ -36,7 +37,7 @@ export function createApp(db: DB) {
   });
 
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true });
+    res.set('Cache-Control', 'no-store').json({ ok: true, version });
   });
   app.use('/api/auth', authLimiter, authRouter(db));
   app.use('/api/wishlists', wishlistsRouter(db));

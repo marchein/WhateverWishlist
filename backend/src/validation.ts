@@ -20,12 +20,13 @@ const optionalText = (max: number) =>
     .nullish()
     .transform((value) => value || null);
 
+export const passwordSchema = z.string()
+  .min(8, 'Password must be at least 8 characters')
+  .refine((value) => Buffer.byteLength(value) <= 72, 'Password is too long');
+
 export const registerSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .refine((value) => Buffer.byteLength(value) <= 72, 'Password is too long'),
+  password: passwordSchema,
   displayName: z.string().trim().min(1).max(60),
 });
 
