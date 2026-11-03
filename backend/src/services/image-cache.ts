@@ -152,8 +152,8 @@ export class ImageCache {
   async cacheImage(imageUrl: string): Promise<string> {
     if (!imageUrl) return imageUrl;
 
-    // Don't cache local uploads, they're already on our server
-    if (imageUrl.startsWith('/uploads/')) {
+    // Don't cache local uploads or already-cached images, they're already on our server
+    if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('/_cache/')) {
       return imageUrl;
     }
 
