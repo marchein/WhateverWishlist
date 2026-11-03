@@ -9,6 +9,9 @@
 } @else {
 <ion-header>
   <ion-toolbar class="page-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button [text]="'common.back' | t" />
+    </ion-buttons>
     <ion-title>{{ data()?.wishlist?.title ?? ('app.title' | t) }}</ion-title>
     <ion-buttons slot="end">
       <ion-button routerLink="/status" [attr.aria-label]="'status.title' | t">
