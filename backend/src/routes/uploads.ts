@@ -31,7 +31,7 @@ export function uploadsRouter(db: DB): Router {
 
     const fileName = `${randomUUID()}.${type}`;
     await writeFile(path.join(config.uploadDir, fileName), req.file.buffer);
-    // Relative on purpose: clients resolve it against their API base URL (web and native app alike).
+    // Relative on purpose: clients resolve it against their API base URL (e.g. the dev server on another port).
     res.status(201).json({ url: `/uploads/${fileName}` });
   });
 

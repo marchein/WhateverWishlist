@@ -103,6 +103,7 @@ export class SharedWishlistPage implements ViewWillEnter {
   readonly filter = signal<Filter>('all');
   readonly sort = signal<Sort>('newest');
   readonly busyItem = signal<string | null>(null);
+  readonly followBusy = signal(false);
   protected readonly sortOptions = SORT_OPTIONS;
 
   readonly visibleItems = computed(() => {
@@ -138,6 +139,23 @@ export class SharedWishlistPage implements ViewWillEnter {
   async startPreview(): Promise<void> {
     await this.load();
     if (this.data()?.isOwner) this.previewing.set(true);
+  }
+
+  async toggleFollow(): Promise<void> {
+    const current = this.data();
+    if (!current || current.isOwner || this.followBusy()) return;
+    this.followBusy.set(true);
+    try {
+      const { isFollowing } = current.isFollowing
+        ? await this.api.unfollowWishlist(this.token())
+        : await this.api.followWishlist(this.token());
+      this.data.update((data) => data && { ...data, isFollowing });
+      if (isFollowing) await this.notify.success(this.i18n.t('shared.followed'));
+    } catch (error) {
+      await this.notify.error(error);
+    } finally {
+      this.followBusy.set(false);
+    }
   }
 
   setFilter(value: unknown): void {

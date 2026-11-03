@@ -4,6 +4,8 @@ import { firstValueFrom, timeout, type Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type {
   AuthResponse,
+  FollowedWishlist,
+  Follower,
   Item,
   ItemInput,
   ScrapeResult,
@@ -30,8 +32,11 @@ export class ApiService {
   private patch<T>(path: string, body: unknown) {
     return this.call(this.http.patch<T>(`${API_URL}${path}`, body));
   }
-  private delete(path: string) {
-    return this.call(this.http.delete<void>(`${API_URL}${path}`));
+  private put<T>(path: string, body: unknown = {}) {
+    return this.call(this.http.put<T>(`${API_URL}${path}`, body));
+  }
+  private delete<T = void>(path: string) {
+    return this.call(this.http.delete<T>(`${API_URL}${path}`));
   }
   private call<T>(request: Observable<T>): Promise<T> {
     return firstValueFrom(request);
@@ -56,6 +61,9 @@ export class ApiService {
   listWishlists() {
     return this.get<Wishlist[]>('/wishlists');
   }
+  listFollowedWishlists() {
+    return this.get<FollowedWishlist[]>('/wishlists/followed');
+  }
   createWishlist(input: WishlistInput) {
     return this.post<Wishlist>('/wishlists', input);
   }
@@ -68,8 +76,14 @@ export class ApiService {
   deleteWishlist(id: string) {
     return this.delete(`/wishlists/${encodeURIComponent(id)}`);
   }
-  regenerateShareToken(id: string) {
-    return this.post<Wishlist>(`/wishlists/${encodeURIComponent(id)}/share-token`);
+  regenerateShareToken(id: string, keepFollowers: boolean) {
+    return this.post<Wishlist>(`/wishlists/${encodeURIComponent(id)}/share-token`, { keepFollowers });
+  }
+  listFollowers(id: string) {
+    return this.get<Follower[]>(`/wishlists/${encodeURIComponent(id)}/followers`);
+  }
+  removeFollower(id: string, userId: string) {
+    return this.delete(`/wishlists/${encodeURIComponent(id)}/followers/${encodeURIComponent(userId)}`);
   }
   createItem(wishlistId: string, input: ItemInput) {
     return this.post<Item>(`/wishlists/${encodeURIComponent(wishlistId)}/items`, input);
@@ -94,6 +108,12 @@ export class ApiService {
   // Shared (public) wishlists
   getShared(token: string) {
     return this.get<SharedWishlist>(`/shared/${encodeURIComponent(token)}`);
+  }
+  followWishlist(token: string) {
+    return this.put<{ isFollowing: boolean }>(`/shared/${encodeURIComponent(token)}/follow`);
+  }
+  unfollowWishlist(token: string) {
+    return this.delete<{ isFollowing: boolean }>(`/shared/${encodeURIComponent(token)}/follow`);
   }
   markPurchased(token: string, itemId: string, body: { name?: string; quantity: number }) {
     return this.post<SharedItem>(

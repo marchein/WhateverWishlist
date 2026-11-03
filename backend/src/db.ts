@@ -58,6 +58,15 @@ const migrations: string[] = [
   CREATE INDEX idx_purchases_item ON purchases(item_id);
   `,
   `ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0;`,
+  `
+  CREATE TABLE wishlist_follows (
+    user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    wishlist_id TEXT NOT NULL REFERENCES wishlists(id) ON DELETE CASCADE,
+    created_at  TEXT NOT NULL,
+    PRIMARY KEY (user_id, wishlist_id)
+  );
+  CREATE INDEX idx_wishlist_follows_wishlist ON wishlist_follows(wishlist_id);
+  `,
 ];
 
 export function openDatabase(file: string): DB {

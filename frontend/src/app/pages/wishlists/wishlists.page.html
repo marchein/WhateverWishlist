@@ -1,6 +1,6 @@
 <ion-header>
-  <ion-toolbar>
-    <ion-title>{{ 'wishlists.title' | t }}</ion-title>
+  <ion-toolbar class="page-toolbar">
+    <ion-title>{{ 'app.title' | t }}</ion-title>
     <ion-buttons slot="end">
       <ion-button routerLink="/status" [attr.aria-label]="'status.title' | t">
         <ion-icon slot="icon-only" name="information-circle-outline" />
@@ -12,14 +12,14 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="app-surface">
   <ion-refresher slot="fixed" (ionRefresh)="load($event)">
     <ion-refresher-content />
   </ion-refresher>
 
   @if (loading()) {
     <div class="center"><ion-spinner /></div>
-  } @else if (wishlists().length === 0) {
+  } @else if (wishlists().length === 0 && followed().length === 0) {
     <div class="empty">
       <ion-icon name="gift-outline" color="medium" />
       <h2>{{ 'wishlists.greeting' | t: { name: auth.user()?.displayName } }}</h2>
@@ -30,22 +30,84 @@
       </ion-button>
     </div>
   } @else {
-    <ion-list>
-      @for (wishlist of wishlists(); track wishlist.id) {
-        <ion-item [routerLink]="['/s', wishlist.shareToken]" detail>
-          <ion-icon slot="start" name="gift-outline" color="primary" />
-          <ion-label>
-            <h2>{{ wishlist.title }}</h2>
-            <p>
-              {{ 'wishlists.wishCount' | t: { count: wishlist.itemCount ?? 0 } }}
-              @if (wishlist.eventDate) {
-                · {{ wishlist.eventDate | localDate }}
-              }
-            </p>
-          </ion-label>
-        </ion-item>
-      }
-    </ion-list>
+    <div class="overview page-column">
+      <p class="greeting">{{ 'wishlists.greeting' | t: { name: auth.user()?.displayName } }}</p>
+
+      <section class="own" aria-labelledby="own-heading">
+        <div class="section-header">
+          <h2 id="own-heading">{{ 'wishlists.title' | t }}</h2>
+          @if (wishlists().length) {
+            <span class="count">{{ wishlists().length }}</span>
+          }
+        </div>
+        @if (wishlists().length) {
+          <ion-list class="card-list" lines="full">
+            @for (wishlist of wishlists(); track wishlist.id) {
+              <ion-item [routerLink]="['/s', wishlist.shareToken]" detail>
+                <div slot="start" class="tile own-tile" aria-hidden="true"><ion-icon name="gift-outline" /></div>
+                <ion-label>
+                  <h3>{{ wishlist.title }}</h3>
+                  <p>
+                    {{ 'wishlists.wishCount' | t: { count: wishlist.itemCount ?? 0 } }}
+                    @if (wishlist.eventDate) {
+                      · {{ wishlist.eventDate | localDate }}
+                    }
+                  </p>
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        } @else {
+          <button type="button" class="placeholder action" (click)="create()">
+            <ion-icon name="add" aria-hidden="true" />
+            <span>{{ 'wishlists.createFirst' | t }}</span>
+          </button>
+        }
+      </section>
+
+      <section class="followed" aria-labelledby="followed-heading">
+        <div class="section-header">
+          <h2 id="followed-heading">{{ 'wishlists.followed' | t }}</h2>
+          @if (followed().length) {
+            <span class="count">{{ followed().length }}</span>
+          }
+        </div>
+        @if (followed().length) {
+          <ion-list class="card-list" lines="full">
+            @for (wishlist of followed(); track wishlist.id) {
+              <ion-item-sliding>
+                <ion-item [routerLink]="['/s', wishlist.shareToken]" detail>
+                  <div slot="start" class="tile followed-tile" aria-hidden="true">
+                    {{ wishlist.ownerName.charAt(0).toUpperCase() }}
+                  </div>
+                  <ion-label>
+                    <h3>{{ wishlist.title }}</h3>
+                    <p>
+                      {{ 'wishlists.ownerName' | t: { name: wishlist.ownerName } }}
+                      · {{ 'wishlists.wishCount' | t: { count: wishlist.itemCount ?? 0 } }}
+                      @if (wishlist.eventDate) {
+                        · {{ wishlist.eventDate | localDate }}
+                      }
+                    </p>
+                  </ion-label>
+                </ion-item>
+                <ion-item-options side="end">
+                  <ion-item-option color="danger" (click)="unfollow(wishlist)">
+                    <ion-icon slot="start" name="close" />
+                    {{ 'wishlists.unfollow' | t }}
+                  </ion-item-option>
+                </ion-item-options>
+              </ion-item-sliding>
+            }
+          </ion-list>
+        } @else {
+          <div class="placeholder">
+            <ion-icon name="bookmark-outline" aria-hidden="true" />
+            <span>{{ 'wishlists.followedEmpty' | t }}</span>
+          </div>
+        }
+      </section>
+    </div>
   }
 
   <app-language-switch />
@@ -58,14 +120,14 @@
 </ion-content>
 
 <ion-modal
-  class="create-dialog"
+  class="create-dialog compact-dialog"
   [isOpen]="creating()"
   [canDismiss]="canDismissCreation"
   (didDismiss)="creating.set(false)"
   [attr.aria-label]="'wishlists.new' | t"
 >
   <ng-template>
-    <form class="create-form" [formGroup]="form" (ngSubmit)="submit()">
+    <form class="dialog-body" [formGroup]="form" (ngSubmit)="submit()">
       <h2>{{ 'wishlists.new' | t }}</h2>
       <p>{{ 'wishlists.createHint' | t }}</p>
 
@@ -84,7 +146,7 @@
       <label for="wishlist-date">{{ 'wishlists.dateOptional' | t }}</label>
       <input id="wishlist-date" formControlName="eventDate" type="date" [readonly]="saving()" />
 
-      <div class="create-actions">
+      <div class="dialog-actions">
         <ion-button fill="outline" type="button" [disabled]="saving()" (click)="creating.set(false)">
           {{ 'common.cancel' | t }}
         </ion-button>

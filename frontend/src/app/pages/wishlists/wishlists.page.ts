@@ -10,6 +10,9 @@ import {
   IonHeader,
   IonIcon,
   IonItem,
+  IonItemOption,
+  IonItemOptions,
+  IonItemSliding,
   IonLabel,
   IonList,
   IonModal,
@@ -27,7 +30,7 @@ import { ApiService } from '../../core/api.service';
 import { LanguageSwitchComponent } from '../../components/language-switch.component';
 import { AuthService } from '../../core/auth.service';
 import { I18nService, LocalDatePipe, TranslatePipe } from '../../core/i18n/i18n';
-import type { Wishlist } from '../../core/models';
+import type { FollowedWishlist, Wishlist } from '../../core/models';
 import { NotifyService } from '../../core/ui';
 
 @Component({
@@ -53,6 +56,9 @@ import { NotifyService } from '../../core/ui';
     IonList,
     IonModal,
     IonItem,
+    IonItemSliding,
+    IonItemOptions,
+    IonItemOption,
     IonLabel,
     IonSpinner,
     IonFab,
@@ -68,6 +74,7 @@ export class WishlistsPage implements ViewWillEnter {
   private readonly createModal = viewChild.required(IonModal);
 
   readonly wishlists = signal<Wishlist[]>([]);
+  readonly followed = signal<FollowedWishlist[]>([]);
   readonly loading = signal(true);
   readonly creating = signal(false);
   readonly saving = signal(false);
@@ -87,12 +94,24 @@ export class WishlistsPage implements ViewWillEnter {
 
   async load(event?: RefresherCustomEvent): Promise<void> {
     try {
-      this.wishlists.set(await this.api.listWishlists());
+      const [own, followed] = await Promise.all([this.api.listWishlists(), this.api.listFollowedWishlists()]);
+      this.wishlists.set(own);
+      this.followed.set(followed);
     } catch (error) {
       await this.notify.error(error);
     } finally {
       this.loading.set(false);
       await event?.target.complete();
+    }
+  }
+
+  async unfollow(wishlist: FollowedWishlist): Promise<void> {
+    try {
+      await this.api.unfollowWishlist(wishlist.shareToken);
+      this.followed.update((lists) => lists.filter((list) => list.id !== wishlist.id));
+      await this.notify.success(this.i18n.t('wishlists.unfollowed', { title: wishlist.title }));
+    } catch (error) {
+      await this.notify.error(error);
     }
   }
 

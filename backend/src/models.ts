@@ -62,6 +62,14 @@ export const toWishlistDto = (row: WishlistRow & { item_count?: number }) => ({
   updatedAt: row.updated_at,
 });
 
+export const toFollowedWishlistDto = (
+  row: WishlistRow & { item_count: number; owner_name: string; followed_at: string },
+) => ({
+  ...toWishlistDto(row),
+  ownerName: row.owner_name,
+  followedAt: row.followed_at,
+});
+
 export const toItemDto = (row: ItemRow) => ({
   id: row.id,
   wishlistId: row.wishlist_id,

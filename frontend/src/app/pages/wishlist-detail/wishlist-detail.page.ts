@@ -15,24 +15,21 @@ import {
   IonLabel,
   IonList,
   IonModal,
-  IonNote,
   IonSelect,
   IonSelectOption,
   IonSpinner,
-  IonThumbnail,
   IonTitle,
+  IonToggle,
   IonToolbar,
   ModalController,
   NavController,
 } from '@ionic/angular';
-import { Capacitor } from '@capacitor/core';
-import { Share } from '@capacitor/share';
 import { environment } from '../../../environments/environment';
 import { ItemEditorComponent } from '../../components/item-editor/item-editor.component';
 import { PriorityStarsComponent } from '../../components/priority-stars.component';
 import { ApiService } from '../../core/api.service';
 import { I18nService, LocalDatePipe, PricePipe, TranslatePipe } from '../../core/i18n/i18n';
-import type { Item, WishlistWithItems } from '../../core/models';
+import type { Follower, Item, WishlistWithItems } from '../../core/models';
 import { AssetUrlPipe, NotifyService } from '../../core/ui';
 import { SORT_OPTIONS, sortItems, type Sort } from '../shared-wishlist/sort-items';
 
@@ -59,12 +56,11 @@ import { SORT_OPTIONS, sortItems, type Sort } from '../shared-wishlist/sort-item
     IonList,
     IonModal,
     IonItem,
-    IonThumbnail,
     IonLabel,
-    IonNote,
     IonSelect,
     IonSelectOption,
     IonSpinner,
+    IonToggle,
     IonFab,
     IonFabButton,
   ],
@@ -88,7 +84,14 @@ export class WishlistDetailPage implements OnChanges {
   protected readonly sortOptions = SORT_OPTIONS;
   readonly wishlist = signal<WishlistWithItems | null>(null);
   readonly sharing = signal(false);
-  readonly systemSharingAvailable = Capacitor.isNativePlatform() || typeof navigator.share === 'function';
+  readonly showingFollowers = signal(false);
+  readonly regenerating = signal(false);
+  readonly keepFollowers = signal(true);
+  readonly regenerateBusy = signal(false);
+  readonly canDismissRegenerate = async (): Promise<boolean> => !this.regenerateBusy();
+  /** null while the follower list is loading. */
+  readonly followers = signal<Follower[] | null>(null);
+  readonly systemSharingAvailable = typeof navigator.share === 'function';
   readonly shareUrl = computed(() => {
     const wishlist = this.wishlist();
     return wishlist ? `${environment.webBaseUrl || window.location.origin}/s/${wishlist.shareToken}` : '';
@@ -136,18 +139,10 @@ export class WishlistDetailPage implements OnChanges {
     const url = this.shareUrl();
     const text = this.i18n.t('detail.shareText', { title: wishlist.title });
     try {
-      if (Capacitor.isNativePlatform()) {
-        await Share.share({ title: wishlist.title, text, url, dialogTitle: this.i18n.t('detail.share') });
-      } else if (navigator.share) {
-        await navigator.share({ title: wishlist.title, text, url });
-      } else {
-        throw new Error('System sharing is not available');
-      }
+      if (!navigator.share) throw new Error('System sharing is not available');
+      await navigator.share({ title: wishlist.title, text, url });
     } catch (error) {
-      if (
-        (error instanceof Error || error instanceof DOMException) &&
-        (error.name === 'AbortError' || error.message === 'Share canceled')
-      ) return;
+      if ((error instanceof Error || error instanceof DOMException) && error.name === 'AbortError') return;
       await this.notify.error(error);
     }
   }
@@ -168,6 +163,11 @@ export class WishlistDetailPage implements OnChanges {
         { text: t('detail.copyLink'), icon: 'copy-outline', data: 'copy' },
         { text: t('detail.menu.edit'), icon: 'create-outline', data: 'edit' },
         { text: t('detail.menu.preview'), icon: 'eye-outline', data: 'preview' },
+        {
+          text: t('detail.menu.followers', { count: this.wishlist()?.followerCount ?? 0 }),
+          icon: 'people-outline',
+          data: 'followers',
+        },
         { text: t('detail.menu.regenerate'), icon: 'refresh-outline', data: 'regenerate' },
         { text: t('detail.menu.delete'), icon: 'trash-outline', role: 'destructive', data: 'delete' },
         { text: t('common.cancel'), role: 'cancel' },
@@ -178,7 +178,8 @@ export class WishlistDetailPage implements OnChanges {
     if (data === 'copy') await this.copyLink();
     if (data === 'edit') await this.editDetails();
     if (data === 'preview') this.preview.emit();
-    if (data === 'regenerate') await this.regenerateLink();
+    if (data === 'followers') await this.openFollowers();
+    if (data === 'regenerate') this.regenerateLink();
     if (data === 'delete') await this.deleteList();
   }
 
@@ -217,21 +218,56 @@ export class WishlistDetailPage implements OnChanges {
     }
   }
 
-  private async regenerateLink(): Promise<void> {
+  /** Opens the dialog; followers are kept unless the owner switches the toggle off. */
+  regenerateLink(): void {
+    this.keepFollowers.set(true);
+    this.regenerating.set(true);
+  }
+
+  async confirmRegenerate(): Promise<void> {
+    if (this.regenerateBusy()) return;
+    this.regenerateBusy.set(true);
+    try {
+      const wishlist = await this.api.regenerateShareToken(this.id(), this.keepFollowers());
+      this.regenerating.set(false);
+      await this.nav.navigateRoot(['/s', wishlist.shareToken]);
+      await this.notify.success(this.i18n.t('detail.regenerate.done'));
+    } catch (error) {
+      await this.notify.error(error);
+    } finally {
+      this.regenerateBusy.set(false);
+    }
+  }
+
+  async openFollowers(): Promise<void> {
+    this.followers.set(null);
+    this.showingFollowers.set(true);
+    try {
+      this.followers.set(await this.api.listFollowers(this.id()));
+    } catch (error) {
+      this.showingFollowers.set(false);
+      await this.notify.error(error);
+    }
+  }
+
+  async removeFollower(follower: Follower): Promise<void> {
+    const t = this.i18n.t.bind(this.i18n);
     const alert = await this.alerts.create({
-      header: this.i18n.t('detail.regenerate.header'),
-      message: this.i18n.t('detail.regenerate.message'),
+      header: t('detail.followers.removeHeader', { name: follower.displayName }),
+      message: t('detail.followers.removeMessage'),
       buttons: [
-        { text: this.i18n.t('common.cancel'), role: 'cancel' },
-        { text: this.i18n.t('detail.regenerate.confirm'), role: 'confirm' },
+        { text: t('common.cancel'), role: 'cancel' },
+        { text: t('detail.followers.remove'), role: 'destructive' },
       ],
     });
     await alert.present();
-    if ((await alert.onDidDismiss()).role !== 'confirm') return;
+    if ((await alert.onDidDismiss()).role !== 'destructive') return;
     try {
-      const wishlist = await this.api.regenerateShareToken(this.id());
-      await this.nav.navigateRoot(['/s', wishlist.shareToken]);
-      await this.notify.success(this.i18n.t('detail.regenerate.done'));
+      await this.api.removeFollower(this.id(), follower.userId);
+      this.followers.update((list) => list?.filter((entry) => entry.userId !== follower.userId) ?? null);
+      this.wishlist.update(
+        (wishlist) => wishlist && { ...wishlist, followerCount: Math.max(0, (wishlist.followerCount ?? 1) - 1) },
+      );
     } catch (error) {
       await this.notify.error(error);
     }

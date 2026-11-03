@@ -221,11 +221,85 @@ describe('wishlist API', () => {
     assert.match(await missing.text(), /Wunschliste nicht gefunden/);
   });
 
-  it('invalidates the old link when the share token is regenerated', async () => {
+  it('lets logged-in recipients follow a shared list and unfollow it again', async () => {
+    const anonymous = await api(`/shared/${shareToken}/follow`, { method: 'PUT' });
+    assert.equal(anonymous.status, 401);
+    assert.equal(anonymous.body.code, 'AUTH_REQUIRED');
+
+    const own = await api(`/shared/${shareToken}/follow`, { method: 'PUT', token: ownerToken });
+    assert.equal(own.status, 403);
+    assert.equal(own.body.code, 'OWN_WISHLIST');
+
+    assert.equal((await api(`/shared/${shareToken}`, { token: friendToken })).body.isFollowing, false);
+    for (let i = 0; i < 2; i++) {
+      const followed = await api(`/shared/${shareToken}/follow`, { method: 'PUT', token: friendToken });
+      assert.equal(followed.status, 200);
+      assert.equal(followed.body.isFollowing, true);
+    }
+    assert.equal((await api(`/shared/${shareToken}`, { token: friendToken })).body.isFollowing, true);
+
+    const list = await api('/wishlists/followed', { token: friendToken });
+    assert.equal(list.status, 200);
+    assert.equal(list.body.length, 1);
+    assert.equal(list.body[0].id, wishlistId);
+    assert.equal(list.body[0].shareToken, shareToken);
+    assert.equal(list.body[0].ownerName, 'Olivia');
+    assert.equal(list.body[0].itemCount, 2);
+    assert.deepEqual((await api('/wishlists/followed', { token: ownerToken })).body, []);
+    assert.equal((await api('/wishlists', { token: friendToken })).body.length, 0);
+
+    const unfollowed = await api(`/shared/${shareToken}/follow`, { method: 'DELETE', token: friendToken });
+    assert.equal(unfollowed.body.isFollowing, false);
+    assert.deepEqual((await api('/wishlists/followed', { token: friendToken })).body, []);
+
+    await api(`/shared/${shareToken}/follow`, { method: 'PUT', token: friendToken });
+  });
+
+  it('lets the owner see and remove followers, but nobody else', async () => {
+    const followers = await api(`/wishlists/${wishlistId}/followers`, { token: ownerToken });
+    assert.equal(followers.status, 200);
+    assert.equal(followers.body.length, 1);
+    assert.equal(followers.body[0].displayName, 'Fred');
+    assert.equal(followers.body[0].email, undefined);
+    assert.equal((await api(`/wishlists/${wishlistId}`, { token: ownerToken })).body.followerCount, 1);
+
+    const fredId = followers.body[0].userId;
+    assert.equal((await api(`/wishlists/${wishlistId}/followers`, { token: friendToken })).status, 404);
+    const foreignRemoval = await api(`/wishlists/${wishlistId}/followers/${fredId}`, {
+      method: 'DELETE', token: friendToken,
+    });
+    assert.equal(foreignRemoval.status, 404);
+
+    const removed = await api(`/wishlists/${wishlistId}/followers/${fredId}`, { method: 'DELETE', token: ownerToken });
+    assert.equal(removed.status, 204);
+    assert.deepEqual((await api('/wishlists/followed', { token: friendToken })).body, []);
+    const again = await api(`/wishlists/${wishlistId}/followers/${fredId}`, { method: 'DELETE', token: ownerToken });
+    assert.equal(again.status, 404);
+    assert.equal(again.body.code, 'FOLLOWER_NOT_FOUND');
+
+    await api(`/shared/${shareToken}/follow`, { method: 'PUT', token: friendToken });
+  });
+
+  it('can keep followers on the new link when the share token is regenerated', async () => {
+    const regenerated = await api(`/wishlists/${wishlistId}/share-token`, {
+      token: ownerToken, body: { keepFollowers: true },
+    });
+    assert.notEqual(regenerated.body.shareToken, shareToken);
+    assert.equal((await api(`/shared/${shareToken}`)).status, 404);
+    const followed = await api('/wishlists/followed', { token: friendToken });
+    assert.equal(followed.body.length, 1);
+    assert.equal(followed.body[0].shareToken, regenerated.body.shareToken);
+    shareToken = regenerated.body.shareToken;
+  });
+
+  it('invalidates the old link and removes followers by default when the share token is regenerated', async () => {
+    assert.equal((await api('/wishlists/followed', { token: friendToken })).body.length, 1);
     const regenerated = await api(`/wishlists/${wishlistId}/share-token`, { method: 'POST', token: ownerToken });
     assert.notEqual(regenerated.body.shareToken, shareToken);
     assert.equal((await api(`/shared/${shareToken}`)).status, 404);
     assert.equal((await api(`/shared/${regenerated.body.shareToken}`)).status, 200);
+    assert.deepEqual((await api('/wishlists/followed', { token: friendToken })).body, []);
+    assert.equal((await api(`/wishlists/${wishlistId}`, { token: ownerToken })).body.followerCount, 0);
   });
 
   it('refuses to scrape internal addresses', async () => {
