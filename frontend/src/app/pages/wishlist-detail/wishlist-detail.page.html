@@ -5,6 +5,14 @@
     </ion-buttons>
     <ion-title>{{ wishlist()?.title }}</ion-title>
     <ion-buttons slot="end">
+      <ion-button
+        (click)="preview.emit()"
+        [disabled]="!wishlist()"
+        [title]="'detail.menu.preview' | t"
+        [attr.aria-label]="'detail.menu.preview' | t"
+      >
+        <ion-icon slot="icon-only" name="eye-outline" />
+      </ion-button>
       <ion-button (click)="openMenu()" [disabled]="!wishlist()" [title]="'detail.more' | t" [attr.aria-label]="'detail.more' | t">
         <ion-icon slot="icon-only" name="ellipsis-vertical" />
       </ion-button>
@@ -60,8 +68,22 @@
         </ion-button>
       </div>
     } @else {
+      <div class="controls ion-padding-horizontal">
+        <ion-select
+          class="sort"
+          interface="popover"
+          justify="start"
+          [label]="'shared.sort.label' | t"
+          [value]="sort()"
+          (ionChange)="setSort($event.detail.value)"
+        >
+          @for (option of sortOptions; track option.value) {
+            <ion-select-option [value]="option.value">{{ option.label | t }}</ion-select-option>
+          }
+        </ion-select>
+      </div>
       <ion-list>
-        @for (item of w.items; track item.id) {
+        @for (item of sortedItems(); track item.id) {
           <ion-item button detail="false" (click)="openEditor(item)">
             <ion-thumbnail slot="start">
               @if (item.imageUrl) {
@@ -73,6 +95,9 @@
             <ion-label>
               <h2>{{ item.title }}</h2>
               <p><app-priority-stars [value]="item.priority" /></p>
+              @if (item.notes) {
+                <p class="notes">{{ item.notes }}</p>
+              }
               <p>
                 {{ item.price | price: item.currency }}
                 @if (item.quantity > 1) {

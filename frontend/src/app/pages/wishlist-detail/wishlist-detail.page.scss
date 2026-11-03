@@ -8,6 +8,23 @@
   height: 100%;
 }
 
+.controls {
+  display: flex;
+  justify-content: flex-end;
+
+  .sort {
+    width: auto;
+  }
+}
+
+ion-label p.notes {
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .owner-hint {
   display: flex;
   align-items: center;

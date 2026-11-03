@@ -64,6 +64,7 @@ export const en = {
   'detail.linkCopied': 'Link copied – send it to your friends and family!',
   'detail.copyFailed': 'Could not copy the link. Please copy it manually.',
   'detail.menu.edit': 'Edit list details',
+  'detail.menu.preview': 'Preview as guest',
   'detail.menu.regenerate': 'Create a new share link',
   'detail.menu.delete': 'Delete list',
   'detail.edit.header': 'Edit list',
@@ -152,6 +153,8 @@ export const en = {
   'priority.4': 'Really want it',
   'priority.5': 'Must have',
 
+  'shared.preview.hint': 'Preview: this is how others see your list. Purchases stay hidden from you.',
+  'shared.preview.exit': 'Exit preview',
   'shared.heading': "{name}'s wishlist",
   'shared.ownerNote': "This is your own list. To keep the surprise, you can't see what has been bought.",
   'shared.filter.all': 'All',

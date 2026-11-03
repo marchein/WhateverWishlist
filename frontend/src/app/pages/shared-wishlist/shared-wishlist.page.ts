@@ -98,6 +98,8 @@ export class SharedWishlistPage implements ViewWillEnter {
   readonly data = signal<SharedWishlist | null>(null);
   readonly notFound = signal(false);
   readonly revision = signal(0);
+  /** Owner-only: show the guest layout. Purchases stay hidden because the API omits them for owners. */
+  readonly previewing = signal(false);
   readonly filter = signal<Filter>('all');
   readonly sort = signal<Sort>('newest');
   readonly busyItem = signal<string | null>(null);
@@ -130,6 +132,12 @@ export class SharedWishlistPage implements ViewWillEnter {
     } finally {
       await event?.target.complete();
     }
+  }
+
+  /** The owner editor loads its own data, so refresh ours before showing wishes added meanwhile. */
+  async startPreview(): Promise<void> {
+    await this.load();
+    if (this.data()?.isOwner) this.previewing.set(true);
   }
 
   setFilter(value: unknown): void {
