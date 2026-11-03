@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActionSheetController, AlertController, IonButton, IonModal, ModalController, NavController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { add, close, copyOutline, ellipsisVertical, eyeOffOutline, shareSocialOutline } from 'ionicons/icons';
+import { add, close, copyOutline, ellipsisVertical, eyeOffOutline, eyeOutline, giftOutline, shareSocialOutline } from 'ionicons/icons';
 import { ApiService } from '../../core/api.service';
 import type { WishlistWithItems } from '../../core/models';
 import { NotifyService } from '../../core/ui';
@@ -22,7 +22,7 @@ describe('Owner editing at the canonical share address', () => {
   const writeText = vi.fn();
 
   beforeEach(() => {
-    addIcons({ add, close, copyOutline, ellipsisVertical, eyeOffOutline, shareSocialOutline });
+    addIcons({ add, close, copyOutline, ellipsisVertical, eyeOffOutline, eyeOutline, giftOutline, shareSocialOutline });
     getWishlist.mockReset().mockResolvedValue(wishlist);
     regenerateShareToken.mockReset().mockResolvedValue({ ...wishlist, shareToken: 'new-token' });
     navigateRoot.mockReset();
@@ -82,6 +82,34 @@ describe('Owner editing at the canonical share address', () => {
     await fixture.whenStable();
     expect(getWishlist).toHaveBeenCalledTimes(2);
     expect(fixture.componentInstance.shareUrl()).toMatch(/\/s\/existing-token$/);
+  });
+
+  it('shows wish notes and orders wishes like the guest view', async () => {
+    const item = (id: string, createdAt: string, priority: number, notes: string | null) => ({
+      id, wishlistId: wishlist.id, title: id, notes, imageUrl: null, price: null, currency: null,
+      priority, quantity: 1, links: [], createdAt, updatedAt: createdAt,
+    });
+    getWishlist.mockResolvedValue({
+      ...wishlist,
+      items: [item('old', '2026-01-01', 5, null), item('new', '2026-02-01', 1, 'Size M, blue')],
+    });
+    const fixture = await createEditor(true);
+    const titles = () => [...fixture.nativeElement.querySelectorAll('ion-item h2')].map((el: Element) => el.textContent);
+    expect(titles()).toEqual(['new', 'old']);
+    expect(fixture.nativeElement.querySelector('ion-label p.notes')?.textContent).toContain('Size M, blue');
+    fixture.componentInstance.setSort('priority');
+    fixture.detectChanges();
+    expect(titles()).toEqual(['old', 'new']);
+  });
+
+  it('requests the guest preview from the toolbar and the menu', async () => {
+    const fixture = await createEditor(true);
+    const previews = vi.fn();
+    fixture.componentInstance.preview.subscribe(previews);
+    const button = fixture.debugElement.queryAll(By.css('ion-header ion-button'))
+      .find((element) => element.nativeElement.getAttribute('aria-label') === 'Preview as guest');
+    button!.triggerEventHandler('click');
+    expect(previews).toHaveBeenCalledTimes(1);
   });
 
   it('keeps item editing and refresh-after-save working', async () => {

@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, model, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ApiService } from '../../core/api.service';
@@ -15,6 +15,8 @@ import { SharedWishlistPage } from './shared-wishlist.page';
 class OwnerEditorStubComponent {
   readonly id = input.required<string>();
   readonly revision = input(0);
+  readonly sort = model('newest');
+  readonly preview = output<void>();
 }
 
 describe('Shared wishlist owner and recipient views', () => {
@@ -54,6 +56,29 @@ describe('Shared wishlist owner and recipient views', () => {
     expect(getShared).toHaveBeenCalledWith('existing-token');
     expect(fixture.nativeElement.querySelector('app-wishlist-detail')?.textContent).toContain('list-id');
     expect(fixture.nativeElement.querySelector('ion-segment')).toBeNull();
+  });
+
+  it('lets the owner preview the guest layout without purchase controls', async () => {
+    getShared.mockResolvedValue(response(true));
+    const fixture = TestBed.createComponent(SharedWishlistPage);
+    fixture.componentRef.setInput('token', 'existing-token');
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+    const added = { ...response(true), items: [{
+      id: 'new-item', wishlistId: 'list-id', title: 'Added meanwhile', notes: null, imageUrl: null, price: null,
+      currency: null, priority: 3, quantity: 1, links: [], createdAt: '2026-01-01', updatedAt: '2026-01-01',
+    }] };
+    getShared.mockResolvedValue(added);
+    await fixture.componentInstance.startPreview();
+    fixture.detectChanges();
+    expect(getShared).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.textContent).toContain('Added meanwhile');
+    expect(fixture.nativeElement.querySelector('app-wishlist-detail')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.owner-note')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('ion-accordion-group')).toBeNull();
+    fixture.componentInstance.previewing.set(false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-wishlist-detail')).not.toBeNull();
   });
 
   it('renders the recipient view without editing controls for a non-owner', async () => {

@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal, type OnChanges } from '@angular/core';
+import { Component, computed, inject, input, model, output, signal, type OnChanges } from '@angular/core';
 import {
   ActionSheetController,
   AlertController,
@@ -16,6 +16,8 @@ import {
   IonList,
   IonModal,
   IonNote,
+  IonSelect,
+  IonSelectOption,
   IonSpinner,
   IonThumbnail,
   IonTitle,
@@ -32,6 +34,7 @@ import { ApiService } from '../../core/api.service';
 import { I18nService, LocalDatePipe, PricePipe, TranslatePipe } from '../../core/i18n/i18n';
 import type { Item, WishlistWithItems } from '../../core/models';
 import { AssetUrlPipe, NotifyService } from '../../core/ui';
+import { SORT_OPTIONS, sortItems, type Sort } from '../shared-wishlist/sort-items';
 
 /** The owner's view of one wishlist. Intentionally shows nothing about purchases. */
 @Component({
@@ -59,6 +62,8 @@ import { AssetUrlPipe, NotifyService } from '../../core/ui';
     IonThumbnail,
     IonLabel,
     IonNote,
+    IonSelect,
+    IonSelectOption,
     IonSpinner,
     IonFab,
     IonFabButton,
@@ -76,12 +81,22 @@ export class WishlistDetailPage implements OnChanges {
   /** Supplied only after the shared API confirms this viewer owns the list. */
   readonly id = input.required<string>();
   readonly revision = input(0);
+  /** Shared with the guest preview so both views list wishes in the same order. */
+  readonly sort = model<Sort>('newest');
+  /** Asks the parent to show the list the way guests see it, still without purchases. */
+  readonly preview = output<void>();
+  protected readonly sortOptions = SORT_OPTIONS;
   readonly wishlist = signal<WishlistWithItems | null>(null);
   readonly sharing = signal(false);
   readonly systemSharingAvailable = Capacitor.isNativePlatform() || typeof navigator.share === 'function';
   readonly shareUrl = computed(() => {
     const wishlist = this.wishlist();
     return wishlist ? `${environment.webBaseUrl || window.location.origin}/s/${wishlist.shareToken}` : '';
+  });
+
+  readonly sortedItems = computed(() => {
+    const wishlist = this.wishlist();
+    return wishlist ? sortItems(wishlist.items, this.sort(), this.i18n.locale(), false) : [];
   });
 
   ngOnChanges(): void {
@@ -105,6 +120,10 @@ export class WishlistDetailPage implements OnChanges {
     await modal.present();
     const { role } = await modal.onWillDismiss();
     if (role === 'saved' || role === 'deleted') await this.load();
+  }
+
+  setSort(value: unknown): void {
+    this.sort.set(SORT_OPTIONS.find((option) => option.value === value)?.value ?? 'newest');
   }
 
   share(): void {
@@ -148,6 +167,7 @@ export class WishlistDetailPage implements OnChanges {
       buttons: [
         { text: t('detail.copyLink'), icon: 'copy-outline', data: 'copy' },
         { text: t('detail.menu.edit'), icon: 'create-outline', data: 'edit' },
+        { text: t('detail.menu.preview'), icon: 'eye-outline', data: 'preview' },
         { text: t('detail.menu.regenerate'), icon: 'refresh-outline', data: 'regenerate' },
         { text: t('detail.menu.delete'), icon: 'trash-outline', role: 'destructive', data: 'delete' },
         { text: t('common.cancel'), role: 'cancel' },
@@ -157,6 +177,7 @@ export class WishlistDetailPage implements OnChanges {
     const { data } = await sheet.onDidDismiss<string>();
     if (data === 'copy') await this.copyLink();
     if (data === 'edit') await this.editDetails();
+    if (data === 'preview') this.preview.emit();
     if (data === 'regenerate') await this.regenerateLink();
     if (data === 'delete') await this.deleteList();
   }

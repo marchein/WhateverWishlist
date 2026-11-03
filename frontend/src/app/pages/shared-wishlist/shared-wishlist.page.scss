@@ -4,8 +4,17 @@
 
 .owner-note ion-card-content {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+
+  span {
+    flex: 1 1 200px;
+  }
+}
+
+.status.preview {
+  justify-content: flex-end;
 }
 
 .controls {

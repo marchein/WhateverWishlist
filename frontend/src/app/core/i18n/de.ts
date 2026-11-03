@@ -66,6 +66,7 @@ export const de: Translations = {
   'detail.linkCopied': 'Link kopiert – schick ihn an Familie und Freunde!',
   'detail.copyFailed': 'Der Link konnte nicht kopiert werden. Bitte kopiere ihn manuell.',
   'detail.menu.edit': 'Listendetails bearbeiten',
+  'detail.menu.preview': 'Vorschau für Gäste',
   'detail.menu.regenerate': 'Neuen Teilen-Link erstellen',
   'detail.menu.delete': 'Liste löschen',
   'detail.edit.header': 'Liste bearbeiten',
@@ -156,6 +157,8 @@ export const de: Translations = {
   'priority.4': 'Wünsche ich mir sehr',
   'priority.5': 'Herzenswunsch',
 
+  'shared.preview.hint': 'Vorschau: So sehen andere deine Liste. Käufe bleiben für dich weiterhin verborgen.',
+  'shared.preview.exit': 'Vorschau beenden',
   'shared.heading': 'Wunschliste von {name}',
   'shared.ownerNote': 'Das ist deine eigene Liste. Damit die Überraschung bleibt, siehst du nicht, was schon gekauft wurde.',
   'shared.filter.all': 'Alle',

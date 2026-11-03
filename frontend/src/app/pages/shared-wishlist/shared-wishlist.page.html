@@ -1,6 +1,11 @@
 @let current = data();
-@if (current && current.isOwner) {
-  <app-wishlist-detail [id]="current.wishlist.id" [revision]="revision()" />
+@if (current && current.isOwner && !previewing()) {
+  <app-wishlist-detail
+    [id]="current.wishlist.id"
+    [revision]="revision()"
+    [(sort)]="sort"
+    (preview)="startPreview()"
+  />
 } @else {
 <ion-header>
   <ion-toolbar>
@@ -33,6 +38,15 @@
   </ion-refresher>
 
   @if (data(); as d) {
+    @if (d.isOwner) {
+      <ion-card class="owner-note" color="light">
+        <ion-card-content>
+          <ion-icon name="eye-outline" />
+          <span>{{ 'shared.preview.hint' | t }}</span>
+          <ion-button size="small" (click)="previewing.set(false)">{{ 'shared.preview.exit' | t }}</ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
     <div class="ion-padding intro">
       <h1>{{ 'shared.heading' | t: { name: d.wishlist.ownerName } }}</h1>
       @if (d.wishlist.eventDate) {
@@ -44,13 +58,11 @@
     </div>
 
     <div class="controls ion-padding-horizontal">
-      @if (!d.isOwner) {
-        <ion-segment [value]="filter()" (ionChange)="setFilter($event.detail.value)">
-          <ion-segment-button value="all"><ion-label>{{ 'shared.filter.all' | t }}</ion-label></ion-segment-button>
-          <ion-segment-button value="open"><ion-label>{{ 'shared.filter.open' | t }}</ion-label></ion-segment-button>
-          <ion-segment-button value="bought"><ion-label>{{ 'shared.filter.bought' | t }}</ion-label></ion-segment-button>
-        </ion-segment>
-      }
+      <ion-segment [value]="filter()" [disabled]="d.isOwner" (ionChange)="setFilter($event.detail.value)">
+        <ion-segment-button value="all"><ion-label>{{ 'shared.filter.all' | t }}</ion-label></ion-segment-button>
+        <ion-segment-button value="open"><ion-label>{{ 'shared.filter.open' | t }}</ion-label></ion-segment-button>
+        <ion-segment-button value="bought"><ion-label>{{ 'shared.filter.bought' | t }}</ion-label></ion-segment-button>
+      </ion-segment>
       <ion-select
         class="sort"
         interface="popover"
@@ -100,7 +112,15 @@
           </div>
         </div>
 
-        @if (!d.isOwner) {
+        @if (d.isOwner) {
+          <!-- Preview: the owner never receives purchase data, so only the guests' action is hinted at. -->
+          <div class="status preview ion-padding-horizontal">
+            <ion-button size="small" [disabled]="true">
+              <ion-icon slot="start" name="cart-outline" />
+              {{ 'shared.iBoughtThis' | t }}
+            </ion-button>
+          </div>
+        } @else {
           <div class="status ion-padding-horizontal">
             @if (remaining(item) === 0) {
               <ion-badge color="success">{{ 'shared.status.bought' | t }}</ion-badge>
