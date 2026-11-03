@@ -6,6 +6,7 @@ import { config } from './config.js';
 import type { DB } from './db.js';
 import { errorHandler, notFound } from './errors.js';
 import { authRouter } from './routes/auth.js';
+import { imageCacheRouter } from './routes/image-cache.js';
 import { scrapeRouter } from './routes/scrape.js';
 import { sharedRouter } from './routes/shared.js';
 import { uploadsRouter } from './routes/uploads.js';
@@ -47,6 +48,7 @@ export function createApp(db: DB) {
     '/uploads',
     express.static(config.uploadDir, { index: false, dotfiles: 'deny', immutable: true, maxAge: '30d' }),
   );
+  app.use('/_cache', imageCacheRouter());
 
   app.use('/api', () => {
     throw notFound('Endpoint');
@@ -54,3 +56,4 @@ export function createApp(db: DB) {
   app.use(errorHandler);
   return app;
 }
+

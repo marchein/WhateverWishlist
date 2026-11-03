@@ -1,5 +1,6 @@
 import { extractFromHtml, extractUrl, guessTitleFromUrl, type ScrapeSource } from './extract.js';
 import { fetchPage, ScrapeError, type FetchedPage, type ScrapeErrorCode } from './safe-fetch.js';
+import { imageCache } from '../services/image-cache.js';
 
 export type ScrapeMessageCode =
   | ScrapeErrorCode
@@ -107,7 +108,7 @@ export async function scrape(input: string, acceptLanguage: string): Promise<Scr
           : msg('HTTP_ERROR', `The website answered with an error (HTTP ${page.status}).`, params),
       );
     } else if (page.contentType.startsWith('image/')) {
-      result.image = page.finalUrl;
+      result.image = await imageCache.cacheImage(page.finalUrl);
       result.sources.image = 'link-itself';
       foundOnPage++;
     } else if (page.html) {
@@ -118,7 +119,7 @@ export async function scrape(input: string, acceptLanguage: string): Promise<Scr
         );
       } else {
         result.title = extracted.title ?? null;
-        result.image = extracted.image ?? null;
+        result.image = extracted.image ? await imageCache.cacheImage(extracted.image) : null;
         result.price = extracted.price ?? null;
         result.currency = extracted.currency ?? null;
         result.siteName = extracted.siteName ?? null;

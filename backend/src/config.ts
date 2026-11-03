@@ -48,4 +48,12 @@ export const config = {
   /** Public origin used for absolute URLs in link previews; derived from the request when unset. */
   publicUrl: env.PUBLIC_URL?.trim().replace(/\/+$/, '') || undefined,
   scraperAcceptLanguage: env.SCRAPER_ACCEPT_LANGUAGE ?? 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+  imageCache: {
+    /** Cache directory for optimized images */
+    dir: env.IMAGE_CACHE_DIR ?? 'data/image-cache',
+    /** Maximum cache size in bytes (default 200MB) */
+    maxSize: Number(env.IMAGE_CACHE_MAX_SIZE ?? 200 * 1024 * 1024),
+    /** Days before deleting unused cached images */
+    maxAge: Number(env.IMAGE_CACHE_MAX_AGE ?? 30),
+  },
 } as const;

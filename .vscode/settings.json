@@ -2,6 +2,12 @@
     "chat.tools.terminal.autoApprove": {
         "npm install-scripts": true,
         "npm run build": true,
-        "npm run lint": true
+        "npm run lint": true,
+        "/^cd backend && grep -n '\"test\"\\\\\\|\"build\"\\\\\\|\"typecheck\"\\\\\\|\"lint\"' package\\.json; node -v$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npm run typecheck": true,
+        "npm test": true
     }
 }
