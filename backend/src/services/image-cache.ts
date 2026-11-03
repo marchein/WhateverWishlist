@@ -152,6 +152,11 @@ export class ImageCache {
   async cacheImage(imageUrl: string): Promise<string> {
     if (!imageUrl) return imageUrl;
 
+    // Don't cache local uploads, they're already on our server
+    if (imageUrl.startsWith('/uploads/')) {
+      return imageUrl;
+    }
+
     const hash = this.generateHash(imageUrl);
     const existingEntry = this.manifest.get(hash);
 

@@ -21,12 +21,12 @@ export class NotifyService {
   }
 }
 
-/** Uploaded images are stored as "/uploads/…" and live on the API server. */
+/** Uploaded images and cached images are stored as "/uploads/…" and "/_cache/…" and live on the API server. */
 @Pipe({ name: 'assetUrl' })
 export class AssetUrlPipe implements PipeTransform {
   transform(url: string | null | undefined): string | null {
     if (!url) return null;
-    return url.startsWith('/uploads/') ? `${environment.apiBaseUrl}${url}` : url;
+    return (url.startsWith('/uploads/') || url.startsWith('/_cache/')) ? `${environment.apiBaseUrl}${url}` : url;
   }
 }
 

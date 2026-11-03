@@ -85,6 +85,24 @@ export const toItemDto = (row: ItemRow) => ({
   updatedAt: row.updated_at,
 });
 
+export const toItemDtoWithCache = async (row: ItemRow, imageCache: { cacheImage: (url: string) => Promise<string> }) => {
+  const imageUrl = row.image_url ? await imageCache.cacheImage(row.image_url) : null;
+  return {
+    id: row.id,
+    wishlistId: row.wishlist_id,
+    title: row.title,
+    notes: row.notes,
+    imageUrl,
+    price: row.price,
+    currency: row.currency,
+    priority: row.priority,
+    quantity: row.quantity,
+    links: JSON.parse(row.links) as string[],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+};
+
 export const toPurchaseDto = (row: PurchaseRow, viewerId: string | undefined) => ({
   id: row.id,
   quantity: row.quantity,
