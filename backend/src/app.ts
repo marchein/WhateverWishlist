@@ -9,7 +9,6 @@ import { authRouter } from './routes/auth.js';
 import { scrapeRouter } from './routes/scrape.js';
 import { sharedRouter } from './routes/shared.js';
 import { uploadsRouter } from './routes/uploads.js';
-import { wellKnownRouter } from './routes/well-known.js';
 import { wishlistsRouter } from './routes/wishlists.js';
 import { version } from './version.js';
 
@@ -44,7 +43,6 @@ export function createApp(db: DB) {
   app.use('/api/shared', sharedWriteLimiter, sharedRouter(db));
   app.use('/api/scrape', scrapeRouter(db));
   app.use('/api/uploads', uploadsRouter(db));
-  app.use('/.well-known', wellKnownRouter(config.iosAppIds));
   app.use(
     '/uploads',
     express.static(config.uploadDir, { index: false, dotfiles: 'deny', immutable: true, maxAge: '30d' }),

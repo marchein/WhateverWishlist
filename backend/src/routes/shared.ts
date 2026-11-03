@@ -41,6 +41,11 @@ export function sharedRouter(db: DB): Router {
     }
   };
 
+  const requireUser = (req: Request) => {
+    if (!req.user) throw new HttpError(401, 'AUTH_REQUIRED', 'Authentication required');
+    return req.user;
+  };
+
   const actorName = (req: Request, name: string | undefined) => {
     const resolved = name || req.user?.displayName;
     if (!resolved) throw new HttpError(400, 'NAME_REQUIRED', 'Please tell us your name');
@@ -123,9 +128,15 @@ export function sharedRouter(db: DB): Router {
     };
 
     if (isOwner) {
-      res.json({ wishlist: header, isOwner, items: items.map(toItemDto) });
+      res.json({ wishlist: header, isOwner, isFollowing: false, items: items.map(toItemDto) });
       return;
     }
+
+    const isFollowing =
+      !!req.user &&
+      !!db
+        .prepare('SELECT 1 FROM wishlist_follows WHERE user_id = ? AND wishlist_id = ?')
+        .get(req.user.id, wishlist.id);
 
     const purchases = db
       .prepare(
@@ -138,8 +149,29 @@ export function sharedRouter(db: DB): Router {
     res.json({
       wishlist: header,
       isOwner,
+      isFollowing,
       items: items.map((item) => toSharedItem(item, byItem.get(item.id) ?? [], req.user?.id)),
     });
+  });
+
+  // Logged-in recipients can keep a list they were sent; it then appears on their start page.
+  router.put('/:token/follow', (req, res) => {
+    const user = requireUser(req);
+    const wishlist = getWishlist(req.params.token);
+    if (user.id === wishlist.owner_id) {
+      throw new HttpError(403, 'OWN_WISHLIST', 'You cannot follow your own wishlist');
+    }
+    db.prepare(
+      'INSERT OR IGNORE INTO wishlist_follows (user_id, wishlist_id, created_at) VALUES (?, ?, ?)',
+    ).run(user.id, wishlist.id, now());
+    res.json({ isFollowing: true });
+  });
+
+  router.delete('/:token/follow', (req, res) => {
+    const user = requireUser(req);
+    const wishlist = getWishlist(req.params.token);
+    db.prepare('DELETE FROM wishlist_follows WHERE user_id = ? AND wishlist_id = ?').run(user.id, wishlist.id);
+    res.json({ isFollowing: false });
   });
 
   router.post('/:token/items/:itemId/purchases', (req, res) => {

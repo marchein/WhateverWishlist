@@ -15,6 +15,11 @@ describe('Owner editing at the canonical share address', () => {
   };
   const getWishlist = vi.fn();
   const regenerateShareToken = vi.fn();
+  const listFollowers = vi.fn();
+  const removeFollower = vi.fn();
+  const alertCreate = vi.fn();
+  const alertDismiss = vi.fn();
+  const menuChoice = vi.fn();
   const navigateRoot = vi.fn();
   const modalCreate = vi.fn();
   const error = vi.fn();
@@ -26,6 +31,14 @@ describe('Owner editing at the canonical share address', () => {
     getWishlist.mockReset().mockResolvedValue(wishlist);
     regenerateShareToken.mockReset().mockResolvedValue({ ...wishlist, shareToken: 'new-token' });
     navigateRoot.mockReset();
+    listFollowers.mockReset().mockResolvedValue([
+      { userId: 'fred', displayName: 'Fred', followedAt: '2026-02-01T10:00:00.000Z' },
+      { userId: 'gina', displayName: 'Gina', followedAt: '2026-02-02T10:00:00.000Z' },
+    ]);
+    removeFollower.mockReset().mockResolvedValue(undefined);
+    alertDismiss.mockReset().mockResolvedValue({ role: 'confirm' });
+    alertCreate.mockReset().mockImplementation(async () => ({ present: vi.fn(), onDidDismiss: alertDismiss }));
+    menuChoice.mockReset().mockReturnValue('regenerate');
     modalCreate.mockReset().mockResolvedValue({
       present: vi.fn(), onWillDismiss: async () => ({ role: 'saved' }),
     });
@@ -40,19 +53,17 @@ describe('Owner editing at the canonical share address', () => {
     TestBed.configureTestingModule({
       imports: [WishlistDetailPage],
       providers: [
-        { provide: ApiService, useValue: { getWishlist, regenerateShareToken } },
+        { provide: ApiService, useValue: { getWishlist, regenerateShareToken, listFollowers, removeFollower } },
         { provide: NavController, useValue: { navigateRoot, navigateBack: vi.fn() } },
         { provide: NotifyService, useValue: { error, success: vi.fn() } },
         { provide: ModalController, useValue: { create: modalCreate } },
         {
           provide: ActionSheetController, useValue: {
-            create: async () => ({ present: vi.fn(), onDidDismiss: async () => ({ data: 'regenerate' }) }),
+            create: async () => ({ present: vi.fn(), onDidDismiss: async () => ({ data: menuChoice() }) }),
           },
         },
         {
-          provide: AlertController, useValue: {
-            create: async () => ({ present: vi.fn(), onDidDismiss: async () => ({ role: 'confirm' }) }),
-          },
+          provide: AlertController, useValue: { create: alertCreate },
         },
       ],
     });
@@ -94,7 +105,7 @@ describe('Owner editing at the canonical share address', () => {
       items: [item('old', '2026-01-01', 5, null), item('new', '2026-02-01', 1, 'Size M, blue')],
     });
     const fixture = await createEditor(true);
-    const titles = () => [...fixture.nativeElement.querySelectorAll('ion-item h2')].map((el: Element) => el.textContent);
+    const titles = () => [...fixture.nativeElement.querySelectorAll('ion-item h3')].map((el: Element) => el.textContent);
     expect(titles()).toEqual(['new', 'old']);
     expect(fixture.nativeElement.querySelector('ion-label p.notes')?.textContent).toContain('Size M, blue');
     fixture.componentInstance.setSort('priority');
@@ -121,12 +132,80 @@ describe('Owner editing at the canonical share address', () => {
     expect(getWishlist).toHaveBeenCalledTimes(2);
   });
 
-  it('moves to the new canonical address after explicitly regenerating a link', async () => {
+  it('opens the regenerate dialog with followers kept by default and moves to the new address', async () => {
     const fixture = await createEditor();
+    const page = fixture.componentInstance;
+    page.keepFollowers.set(false);
+    await page.openMenu();
+    expect(page.regenerating()).toBe(true);
+    expect(page.keepFollowers()).toBe(true);
     expect(regenerateShareToken).not.toHaveBeenCalled();
-    await fixture.componentInstance.openMenu();
-    expect(regenerateShareToken).toHaveBeenCalledWith(wishlist.id);
+
+    await page.confirmRegenerate();
+    expect(regenerateShareToken).toHaveBeenCalledWith(wishlist.id, true);
     expect(navigateRoot).toHaveBeenCalledWith(['/s', 'new-token']);
+    expect(page.regenerating()).toBe(false);
+  });
+
+  it('removes followers when the toggle is switched off and explains the consequence', async () => {
+    getWishlist.mockResolvedValue({ ...wishlist, followerCount: 2 });
+    const fixture = await createEditor(true);
+    const page = fixture.componentInstance;
+    page.regenerateLink();
+    fixture.detectChanges();
+    const modal = fixture.debugElement.queryAll(By.directive(IonModal))
+      .map((element) => element.componentInstance as IonModal)
+      .find((instance) => (instance as unknown as { el: HTMLElement }).el.classList.contains('regenerate-dialog'))!;
+    await modal.present();
+    fixture.detectChanges();
+    const hint = () => document.querySelector('#keep-followers-hint')?.textContent ?? '';
+    expect(document.querySelector('ion-toggle.keep-followers')?.textContent).toContain('Keep followers');
+    expect(document.querySelector('ion-toggle.keep-followers')?.textContent).toContain('2 followers');
+    expect(hint()).toContain('automatically use the new link');
+
+    page.keepFollowers.set(false);
+    fixture.detectChanges();
+    expect(hint()).toContain('All current followers are removed');
+    await page.confirmRegenerate();
+    expect(regenerateShareToken).toHaveBeenCalledWith(wishlist.id, false);
+    await modal.dismiss();
+  });
+
+  it('keeps the dialog open and reports errors when regenerating fails', async () => {
+    const failure = new Error('Offline');
+    regenerateShareToken.mockRejectedValue(failure);
+    const page = (await createEditor()).componentInstance;
+    page.regenerateLink();
+    await page.confirmRegenerate();
+    expect(error).toHaveBeenCalledWith(failure);
+    expect(page.regenerating()).toBe(true);
+    expect(page.regenerateBusy()).toBe(false);
+    expect(navigateRoot).not.toHaveBeenCalled();
+  });
+
+  it('shows followers and removes one after confirmation', async () => {
+    getWishlist.mockResolvedValue({ ...wishlist, followerCount: 2 });
+    const fixture = await createEditor(true);
+    const page = fixture.componentInstance;
+    expect(fixture.nativeElement.querySelector('.followers-button')?.textContent).toContain('2 followers');
+
+    menuChoice.mockReturnValue('followers');
+    await page.openMenu();
+    expect(listFollowers).toHaveBeenCalledWith(wishlist.id);
+    expect(page.showingFollowers()).toBe(true);
+    expect(page.followers()?.map((follower) => follower.displayName)).toEqual(['Fred', 'Gina']);
+
+    alertDismiss.mockResolvedValue({ role: 'cancel' });
+    await page.removeFollower(page.followers()![0]!);
+    expect(removeFollower).not.toHaveBeenCalled();
+
+    alertDismiss.mockResolvedValue({ role: 'destructive' });
+    await page.removeFollower(page.followers()![0]!);
+    expect(removeFollower).toHaveBeenCalledWith(wishlist.id, 'fred');
+    expect(page.followers()?.map((follower) => follower.displayName)).toEqual(['Gina']);
+    expect(page.wishlist()?.followerCount).toBe(1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.followers-button')?.textContent).toContain('1 follower');
   });
 
   it('opens the share dialog without immediately copying or invoking system sharing', async () => {

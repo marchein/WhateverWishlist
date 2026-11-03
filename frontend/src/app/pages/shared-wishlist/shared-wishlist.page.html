@@ -8,7 +8,7 @@
   />
 } @else {
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar class="page-toolbar">
     <ion-title>{{ data()?.wishlist?.title ?? ('app.title' | t) }}</ion-title>
     <ion-buttons slot="end">
       <ion-button routerLink="/status" [attr.aria-label]="'status.title' | t">
@@ -32,14 +32,15 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="app-surface">
   <ion-refresher slot="fixed" (ionRefresh)="load($event)">
     <ion-refresher-content />
   </ion-refresher>
 
+  <div class="page-column">
   @if (data(); as d) {
     @if (d.isOwner) {
-      <ion-card class="owner-note" color="light">
+      <ion-card class="owner-note">
         <ion-card-content>
           <ion-icon name="eye-outline" />
           <span>{{ 'shared.preview.hint' | t }}</span>
@@ -47,7 +48,7 @@
         </ion-card-content>
       </ion-card>
     }
-    <div class="ion-padding intro">
+    <header class="hero">
       <h1>{{ 'shared.heading' | t: { name: d.wishlist.ownerName } }}</h1>
       @if (d.wishlist.eventDate) {
         <p><strong>{{ d.wishlist.eventDate | localDate: 'longDate' }}</strong></p>
@@ -55,9 +56,22 @@
       @if (d.wishlist.description) {
         <p>{{ d.wishlist.description }}</p>
       }
-    </div>
+      @if (!d.isOwner && auth.isLoggedIn()) {
+        <ion-button
+          class="follow"
+          size="small"
+          [fill]="d.isFollowing ? 'outline' : 'solid'"
+          [disabled]="followBusy()"
+          [attr.aria-pressed]="!!d.isFollowing"
+          (click)="toggleFollow()"
+        >
+          <ion-icon slot="start" [name]="d.isFollowing ? 'bookmark' : 'bookmark-outline'" />
+          {{ (d.isFollowing ? 'shared.following' : 'shared.follow') | t }}
+        </ion-button>
+      }
+    </header>
 
-    <div class="controls ion-padding-horizontal">
+    <div class="controls">
       <ion-segment [value]="filter()" [disabled]="d.isOwner" (ionChange)="setFilter($event.detail.value)">
         <ion-segment-button value="all"><ion-label>{{ 'shared.filter.all' | t }}</ion-label></ion-segment-button>
         <ion-segment-button value="open"><ion-label>{{ 'shared.filter.open' | t }}</ion-label></ion-segment-button>
@@ -198,6 +212,7 @@
   } @else {
     <div class="ion-padding ion-text-center"><ion-spinner /></div>
   }
+  </div>
 
   <app-language-switch />
 </ion-content>

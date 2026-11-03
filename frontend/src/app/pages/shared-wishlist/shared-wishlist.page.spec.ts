@@ -21,7 +21,11 @@ class OwnerEditorStubComponent {
 
 describe('Shared wishlist owner and recipient views', () => {
   const getShared = vi.fn();
+  const followWishlist = vi.fn();
+  const unfollowWishlist = vi.fn();
   const error = vi.fn();
+  const success = vi.fn();
+  let loggedIn = false;
   const response = (isOwner: boolean): SharedWishlist => ({
     wishlist: {
       id: 'list-id', title: 'Birthday', description: null, eventDate: null, ownerName: 'Owner',
@@ -32,14 +36,18 @@ describe('Shared wishlist owner and recipient views', () => {
 
   beforeEach(() => {
     getShared.mockReset();
+    followWishlist.mockReset().mockResolvedValue({ isFollowing: true });
+    unfollowWishlist.mockReset().mockResolvedValue({ isFollowing: false });
     error.mockReset();
+    success.mockReset();
+    loggedIn = false;
     TestBed.configureTestingModule({
       imports: [SharedWishlistPage],
       providers: [
         provideRouter([]),
-        { provide: ApiService, useValue: { getShared } },
-        { provide: AuthService, useValue: { isLoggedIn: () => false } },
-        { provide: NotifyService, useValue: { error } },
+        { provide: ApiService, useValue: { getShared, followWishlist, unfollowWishlist } },
+        { provide: AuthService, useValue: { isLoggedIn: () => loggedIn } },
+        { provide: NotifyService, useValue: { error, success } },
       ],
     }).overrideComponent(SharedWishlistPage, {
       remove: { imports: [WishlistDetailPage] },
@@ -105,5 +113,45 @@ describe('Shared wishlist owner and recipient views', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-wishlist-detail')).toBeNull();
     expect(error).toHaveBeenCalledWith(failure);
+  });
+
+  it('lets logged-in recipients follow and unfollow the list', async () => {
+    loggedIn = true;
+    getShared.mockResolvedValue({ ...response(false), isFollowing: false });
+    const fixture = TestBed.createComponent(SharedWishlistPage);
+    fixture.componentRef.setInput('token', 'existing-token');
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+    const button = () => fixture.nativeElement.querySelector('ion-button.follow') as HTMLElement;
+    expect(button().getAttribute('aria-pressed')).toBe('false');
+
+    await fixture.componentInstance.toggleFollow();
+    fixture.detectChanges();
+    expect(followWishlist).toHaveBeenCalledWith('existing-token');
+    expect(success).toHaveBeenCalledTimes(1);
+    expect(button().getAttribute('aria-pressed')).toBe('true');
+
+    await fixture.componentInstance.toggleFollow();
+    fixture.detectChanges();
+    expect(unfollowWishlist).toHaveBeenCalledWith('existing-token');
+    expect(button().getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('offers following neither to guests nor to the owner', async () => {
+    getShared.mockResolvedValue(response(false));
+    const fixture = TestBed.createComponent(SharedWishlistPage);
+    fixture.componentRef.setInput('token', 'existing-token');
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('ion-button.follow')).toBeNull();
+
+    loggedIn = true;
+    getShared.mockResolvedValue(response(true));
+    await fixture.componentInstance.startPreview();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.owner-note')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('ion-button.follow')).toBeNull();
+    await fixture.componentInstance.toggleFollow();
+    expect(followWishlist).not.toHaveBeenCalled();
   });
 });

@@ -22,6 +22,12 @@ export interface Wishlist {
 
 export type WishlistInput = Pick<Wishlist, 'title' | 'description' | 'eventDate'>;
 
+/** Someone else's list the user follows via its share link. */
+export interface FollowedWishlist extends Wishlist {
+  ownerName: string;
+  followedAt: string;
+}
+
 export interface Item {
   id: string;
   wishlistId: string;
@@ -40,7 +46,15 @@ export interface Item {
 export type ItemInput = Pick<Item, 'title' | 'notes' | 'imageUrl' | 'price' | 'currency' | 'priority' | 'quantity' | 'links'>;
 
 export interface WishlistWithItems extends Wishlist {
+  /** Owner view only: how many people follow the list through its share link. */
+  followerCount?: number;
   items: Item[];
+}
+
+export interface Follower {
+  userId: string;
+  displayName: string;
+  followedAt: string;
 }
 
 export interface Purchase {
@@ -68,6 +82,7 @@ export interface SharedWishlist {
     ownerName: string;
   };
   isOwner: boolean;
+  isFollowing?: boolean;
   items: SharedItem[];
 }
 

@@ -183,7 +183,7 @@ describe('administration CLI', () => {
   });
 
   it('upgrades an existing database without changing its users, passwords or share tokens', () => {
-    db.exec('ALTER TABLE users DROP COLUMN session_version; PRAGMA user_version = 1;');
+    db.exec('DROP TABLE wishlist_follows; ALTER TABLE users DROP COLUMN session_version; PRAGMA user_version = 1;');
     db.close();
     db = openDatabase(databaseFile);
     const alice = db.prepare('SELECT * FROM users WHERE id = ?').get('owner-a') as UserRow;

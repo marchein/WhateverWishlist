@@ -44,6 +44,9 @@ const wishlistFields = {
 export const createWishlistSchema = z.object(wishlistFields);
 export const updateWishlistSchema = z.object(wishlistFields).partial();
 
+// Old clients send no body: they don't know about followers, so the safe default is to remove them.
+export const regenerateShareTokenSchema = z.object({ keepFollowers: z.boolean().default(false) });
+
 const itemFields = {
   title: z.string().trim().min(1).max(300),
   notes: optionalText(2000),

@@ -3,10 +3,11 @@ import { Router, type Request } from 'express';
 import { requireAuth } from '../auth.js';
 import type { DB } from '../db.js';
 import { notFound } from '../errors.js';
-import { now, toItemDto, toWishlistDto, type ItemRow, type WishlistRow } from '../models.js';
+import { now, toFollowedWishlistDto, toItemDto, toWishlistDto, type ItemRow, type WishlistRow } from '../models.js';
 import {
   createItemSchema,
   createWishlistSchema,
+  regenerateShareTokenSchema,
   updateItemSchema,
   updateWishlistSchema,
 } from '../validation.js';
@@ -48,6 +49,16 @@ export function wishlistsRouter(db: DB): Router {
 
   const touchWishlist = (id: string) => db.prepare('UPDATE wishlists SET updated_at = ? WHERE id = ?').run(now(), id);
 
+  const followersOf = (wishlistId: string) =>
+    (
+      db
+        .prepare(
+          `SELECT u.id, u.display_name, f.created_at FROM wishlist_follows f JOIN users u ON u.id = f.user_id
+           WHERE f.wishlist_id = ? ORDER BY f.created_at ASC`,
+        )
+        .all(wishlistId) as { id: string; display_name: string; created_at: string }[]
+    ).map((row) => ({ userId: row.id, displayName: row.display_name, followedAt: row.created_at }));
+
   router.get('/', (req, res) => {
     const rows = db
       .prepare(
@@ -56,6 +67,22 @@ export function wishlistsRouter(db: DB): Router {
       )
       .all(req.user!.id) as (WishlistRow & { item_count: number })[];
     res.json(rows.map(toWishlistDto));
+  });
+
+  // Lists of other people the user follows through their share link.
+  router.get('/followed', (req, res) => {
+    const rows = db
+      .prepare(
+        `SELECT w.*, u.display_name AS owner_name, f.created_at AS followed_at,
+                (SELECT COUNT(*) FROM items i WHERE i.wishlist_id = w.id) AS item_count
+         FROM wishlist_follows f
+         JOIN wishlists w ON w.id = f.wishlist_id
+         JOIN users u ON u.id = w.owner_id
+         WHERE f.user_id = ? AND w.owner_id != f.user_id
+         ORDER BY f.created_at DESC`,
+      )
+      .all(req.user!.id) as (WishlistRow & { item_count: number; owner_name: string; followed_at: string })[];
+    res.json(rows.map(toFollowedWishlistDto));
   });
 
   router.post('/', (req, res) => {
@@ -84,7 +111,11 @@ export function wishlistsRouter(db: DB): Router {
     const items = db
       .prepare('SELECT * FROM items WHERE wishlist_id = ? ORDER BY priority DESC, created_at ASC')
       .all(wishlist.id) as ItemRow[];
-    res.json({ ...toWishlistDto({ ...wishlist, item_count: items.length }), items: items.map(toItemDto) });
+    res.json({
+      ...toWishlistDto({ ...wishlist, item_count: items.length }),
+      followerCount: followersOf(wishlist.id).length,
+      items: items.map(toItemDto),
+    });
   });
 
   router.patch('/:id', (req, res) => {
@@ -111,15 +142,35 @@ export function wishlistsRouter(db: DB): Router {
     res.status(204).end();
   });
 
-  // Invalidates the old share link, e.g. when it was sent to the wrong people.
+  // Invalidates the old share link, e.g. when it was sent to the wrong people. The owner decides whether
+  // followers keep access (their start page then points to the new link) or are removed with the old link.
   router.post('/:id/share-token', (req, res) => {
     const wishlist = getOwnedWishlist(req.params.id, req.user!.id);
-    db.prepare('UPDATE wishlists SET share_token = ?, updated_at = ? WHERE id = ?').run(
-      newShareToken(),
-      now(),
-      wishlist.id,
-    );
+    const { keepFollowers } = regenerateShareTokenSchema.parse(req.body ?? {});
+    db.transaction(() => {
+      db.prepare('UPDATE wishlists SET share_token = ?, updated_at = ? WHERE id = ?').run(
+        newShareToken(),
+        now(),
+        wishlist.id,
+      );
+      if (!keepFollowers) db.prepare('DELETE FROM wishlist_follows WHERE wishlist_id = ?').run(wishlist.id);
+    })();
     res.json(toWishlistDto(getOwnedWishlist(wishlist.id, req.user!.id)));
+  });
+
+  // Only display names are revealed: the owner learns who saved the list, not their account details.
+  router.get('/:id/followers', (req, res) => {
+    const wishlist = getOwnedWishlist(req.params.id, req.user!.id);
+    res.json(followersOf(wishlist.id));
+  });
+
+  router.delete('/:id/followers/:userId', (req, res) => {
+    const wishlist = getOwnedWishlist(req.params.id, req.user!.id);
+    const result = db
+      .prepare('DELETE FROM wishlist_follows WHERE wishlist_id = ? AND user_id = ?')
+      .run(wishlist.id, req.params.userId);
+    if (result.changes === 0) throw notFound('Follower');
+    res.status(204).end();
   });
 
   router.post('/:id/items', (req, res) => {

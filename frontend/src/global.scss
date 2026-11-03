@@ -47,3 +47,219 @@ ion-fab.wishlist-fab.fab-horizontal-end {
 ion-fab.wishlist-fab.fab-vertical-bottom {
   bottom: var(--fab-edge-gap);
 }
+
+/* Small centered dialogs built with <ion-modal class="compact-dialog"> and a .dialog-body inside. */
+ion-modal.compact-dialog {
+  --width: calc(100% - 32px);
+  --max-width: 440px;
+  --height: auto;
+  --border-radius: 20px;
+}
+
+.dialog-body {
+  box-sizing: border-box;
+  max-height: 80dvh;
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--ion-background-color, #fff);
+  color: var(--ion-text-color, #000);
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 1.375rem;
+    font-weight: 600;
+  }
+
+  > p {
+    margin: 0 0 24px;
+    color: var(--ion-color-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    display: block;
+    margin: 20px 0 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  input {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 12px;
+    border: 1px solid var(--ion-color-medium);
+    border-radius: 10px;
+    background: var(--ion-background-color, #fff);
+    color: inherit;
+    font: inherit;
+    font-size: 16px;
+    color-scheme: inherit;
+
+    &:focus-visible {
+      outline: 2px solid var(--ion-color-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  input[type='date'] {
+    // iOS's native date appearance can size beyond the declared border box.
+    -webkit-appearance: none;
+    appearance: none;
+
+    &::-webkit-date-and-time-value {
+      min-width: 0;
+      text-align: left;
+    }
+  }
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 28px;
+
+  ion-button {
+    margin: 0;
+    min-height: 48px;
+    --border-radius: 10px;
+  }
+}
+
+/*
+ * Shared page layout
+ * -----------------------------------------------------
+ * Grey surface with a centered content column; toolbars line up with that column on wide screens.
+ */
+:root {
+  --page-max-width: 720px;
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+ion-content.app-surface {
+  --background: var(--ion-background-color-step-50, #f4f4f7);
+}
+
+// Dark items are already lighter than the page, so the plain page color gives the cards contrast.
+@media (prefers-color-scheme: dark) {
+  ion-content.app-surface {
+    --background: var(--ion-background-color);
+  }
+}
+
+.page-column {
+  box-sizing: border-box;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 24px 16px 96px;
+}
+
+ion-toolbar.page-toolbar {
+  --padding-start: max(4px, var(--ion-safe-area-left, 0px), calc((100% - var(--page-max-width)) / 2));
+  --padding-end: max(4px, var(--ion-safe-area-right, 0px), calc((100% - var(--page-max-width)) / 2 + 4px));
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  margin: 0 4px 10px;
+
+  h2 {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ion-color-medium);
+  }
+}
+
+.count {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(var(--ion-color-primary-rgb), 0.12);
+  color: var(--ion-color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+// ion-list.card-list outranks Ionic's own .list-md/.list-ios padding regardless of stylesheet order.
+.card,
+ion-list.card-list {
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+}
+
+.card {
+  padding: 16px;
+  background: var(--ion-item-background, var(--ion-background-color, #fff));
+}
+
+ion-list.card-list {
+  padding: 0;
+  overflow: hidden;
+
+  ion-item {
+    --padding-start: 14px;
+    --min-height: 68px;
+  }
+
+  > ion-item:last-child,
+  > ion-item-sliding:last-child ion-item {
+    --border-width: 0;
+    --inner-border-width: 0;
+  }
+
+  h3 {
+    margin: 0 0 2px;
+    font-weight: 600;
+  }
+
+  p {
+    color: var(--ion-color-medium);
+  }
+}
+
+.tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin: 0 14px 0 0;
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 18px 16px;
+  border: 1.5px dashed var(--ion-color-step-250, #c8c7cc);
+  border-radius: 16px;
+  background: none;
+  color: var(--ion-color-medium);
+  font: inherit;
+  text-align: start;
+
+  > ion-icon {
+    flex: none;
+    font-size: 24px;
+  }
+
+  &.action {
+    color: var(--ion-color-primary);
+    cursor: pointer;
+  }
+}

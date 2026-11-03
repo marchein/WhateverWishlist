@@ -12,11 +12,11 @@ The version badge shows the latest Git tag, not a GitHub Release.
 
 A self-hosted wishlist for wishes from any shop. Share one link with friends and family:
 they can mark gifts as bought, while purchases stay hidden from the logged-in owner.
-Available as a web app and a native iOS app.
+Runs in any browser and can be installed to the home screen as a web app (PWA).
 
 **Start here:** [Deploy](#deploy-with-docker) · [Update](#update-or-roll-back) ·
 [Manage users](#command-line-administration) · [Back up](#back-up-and-restore) ·
-[Contribute](#development-and-contributing) · [Publish a release](#build-and-publish-on-github) · [iOS](#ios-app)
+[Contribute](#development-and-contributing) · [Publish a release](#build-and-publish-on-github) · [Install the app](#install-as-an-app)
 
 ## 🤖 AI-generated project
 
@@ -47,8 +47,7 @@ Never commit the real `.env`.
 | `PUBLIC_URL` | Public origin, e.g. `https://wishlist.example.com`; used in messenger previews. |
 | `WISHLIST_PORT` | Host binding; use `127.0.0.1:8080` with a reverse proxy on the same host. |
 | `TRUST_PROXY` | `2` for web container + HTTPS proxy; `1` when only the web container is in front of the API. |
-| `CORS_ORIGINS` | Additional allowed origins; include `capacitor://localhost` for the iOS app. |
-| `IOS_APP_IDS` | Apple Team ID + bundle ID for Universal Links; see [iOS](#ios-app). |
+| `CORS_ORIGINS` | Additional allowed origins; usually empty because the web app is served from the same origin. |
 | `SCRAPER_ACCEPT_LANGUAGE` | Language requested from shops when reading product pages. |
 
 If the GitHub container packages are private, first run `docker login ghcr.io -u YOUR_GITHUB_USERNAME`
@@ -93,8 +92,8 @@ docker compose up -d --no-build
 docker compose ps
 ```
 
-Then reload the web app and check **App status**. Updating the server does not update an installed
-native iOS app; rebuild or distribute the new iOS version separately.
+Then reload the web app and check **App status**. Installed home-screen apps load the new version
+from the server as well.
 
 - `latest` follows the newest tagged release.
 - To pin or roll back, change **both** image tags in [docker-compose.yml](docker-compose.yml)
@@ -207,7 +206,6 @@ and an automatically generated JWT secret live under `backend/data/` by default.
 ```text
 backend/src/       Express API, SQLite migrations, scraper, administration CLI and tests
 frontend/src/      Ionic + Angular web app
-frontend/ios/      Capacitor iOS project
 scripts/           Package-version synchronization and release checks
 ```
 
@@ -225,7 +223,7 @@ Tests use temporary databases, not development or production data.
 
 Frontend development-tool dependencies `glob` and `minimatch` are pinned through npm overrides
 to patched releases for GHSA-3g3m-2fjr-6pw4 and GHSA-g3hv-75wg-m249. These cross-major overrides
-are validated with tests, lint, builds and Capacitor sync; remove them once upstream tools
+are validated with tests, lint and builds; remove them once upstream tools
 request patched versions themselves.
 
 - Branch from `main`, keep changes focused, add regression tests, and describe user-visible changes in the PR.
@@ -244,7 +242,7 @@ npm run icons:generate --prefix frontend
 npm run test:icons --prefix frontend
 ```
 
-Commit the regenerated web icons, native app icon and launch logos together with the source.
+Commit the regenerated favicon, home-screen and manifest icons together with the source.
 Generation uses the development dependency `sharp`; no system image tools are needed.
 The tests check dimensions, opacity and actual visible artwork, not just file existence.
 
@@ -299,31 +297,16 @@ For an untagged preview build, use **Actions → Docker images → Run workflow*
 Manual runs publish `sha-<commit>` images but **do not update `latest`**. Pin both Compose images to
 that SHA tag to test them. Use a new version/tag for a release; do not move an existing release tag.
 
-## iOS app
+## Install as an app
 
-Requires macOS, Xcode, and an Apple Developer team for device distribution.
+WhateverWishlist is a Progressive Web App; there is no separate native app.
 
-```bash
-npm run ios --prefix frontend       # production web build, Capacitor sync, open Xcode
-npm run ios:sync --prefix frontend  # after web changes: rebuild and sync, then Run again in Xcode
-```
+- **iPhone/iPad (Safari):** open your address, tap **Share → Add to Home Screen**.
+- **Android/desktop (Chrome, Edge):** open your address and choose **Install app** from the browser menu.
 
-Select your team under **Signing & Capabilities**, choose a simulator or device, and press Run.
-For TestFlight/App Store distribution, set the version/build in Xcode and use **Product → Archive**.
-The native icon and launch screen are included in [frontend/ios](frontend/ios).
-
-The production native app connects to `https://wishlist.hein.cx`, configured in
-[environment.prod.ts](frontend/src/environments/environment.prod.ts). For your own server, change
-that address and set `CORS_ORIGINS=capacitor://localhost` on the backend.
-
-Universal Links also require:
-
-- `IOS_APP_IDS=<AppleTeamID>.cx.hein.wishlist` on the server.
-- An `applinks:your-domain` entry in [App.entitlements](frontend/ios/App/App/App.entitlements).
-- A publicly reachable `https://your-domain/.well-known/apple-app-site-association`.
-
-The repository's deployment uses `UJR28ZV94C.cx.hein.wishlist`. Apple's CDN caches the association
-file; after changing it, allow time to refresh and reinstall the app.
+The installed app opens full-screen with its own icon and always uses the version currently
+deployed on your server. Icons and name come from
+[site.webmanifest](frontend/src/assets/icon/site.webmanifest).
 
 ## Sharing and privacy
 
@@ -334,6 +317,12 @@ The logged-in owner's API responses omit purchase information, even through the 
 Anyone with a share link can access its recipient view without an account. Treat it as a bearer link.
 Explicitly regenerating the link or deleting the list invalidates that link; ordinary edits, upgrades
 and password resets do not.
+
+Logged-in recipients can follow a shared list from its `/s/<token>` page. Followed lists appear in a
+separate section on the start page below the user's own wishlists. Owners can see who follows a list
+(display names only) and remove individual followers. When regenerating the share link, the owner
+chooses whether followers keep the list (their start page then points to the new link) or are removed.
+Removing a follower does not revoke the link itself; regenerate it to do that.
 
 Shop-link import supports common product metadata, with manual entry when a shop blocks access.
 Messenger previews include list details and an image, never purchase information.
