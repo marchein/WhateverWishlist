@@ -8,11 +8,13 @@ import {
   activePurchasedQuantity,
   now,
   toItemDto,
+  toItemDtoWithCache,
   toPurchaseDto,
   type ItemRow,
   type PurchaseRow,
   type WishlistRow,
 } from '../models.js';
+import { imageCache } from '../services/image-cache.js';
 import { previewLanguage, renderPreviewTags } from '../preview.js';
 import { purchaseSchema, revertSchema } from '../validation.js';
 
@@ -63,8 +65,8 @@ export function sharedRouter(db: DB): Router {
   const purchasesFor = (itemId: string) =>
     db.prepare('SELECT * FROM purchases WHERE item_id = ? ORDER BY created_at ASC').all(itemId) as PurchaseRow[];
 
-  const toSharedItem = (item: ItemRow, purchases: PurchaseRow[], viewerId: string | undefined) => ({
-    ...toItemDto(item),
+  const toSharedItem = async (item: ItemRow, purchases: PurchaseRow[], viewerId: string | undefined) => ({
+    ...(await toItemDtoWithCache(item, imageCache)),
     purchasedQuantity: activePurchasedQuantity(purchases),
     purchases: purchases.map((p) => toPurchaseDto(p, viewerId)),
   });
@@ -112,7 +114,7 @@ export function sharedRouter(db: DB): Router {
       );
   });
 
-  router.get('/:token', (req, res) => {
+  router.get('/:token', async (req, res) => {
     const wishlist = getWishlist(req.params.token);
     const isOwner = req.user?.id === wishlist.owner_id;
     const items = db
@@ -128,7 +130,7 @@ export function sharedRouter(db: DB): Router {
     };
 
     if (isOwner) {
-      res.json({ wishlist: header, isOwner, isFollowing: false, items: items.map(toItemDto) });
+      res.json({ wishlist: header, isOwner, isFollowing: false, items: await Promise.all(items.map(item => toItemDtoWithCache(item, imageCache))) });
       return;
     }
 
@@ -150,7 +152,7 @@ export function sharedRouter(db: DB): Router {
       wishlist: header,
       isOwner,
       isFollowing,
-      items: items.map((item) => toSharedItem(item, byItem.get(item.id) ?? [], req.user?.id)),
+      items: await Promise.all(items.map((item) => toSharedItem(item, byItem.get(item.id) ?? [], req.user?.id))),
     });
   });
 
@@ -174,7 +176,7 @@ export function sharedRouter(db: DB): Router {
     res.json({ isFollowing: false });
   });
 
-  router.post('/:token/items/:itemId/purchases', (req, res) => {
+  router.post('/:token/items/:itemId/purchases', async (req, res) => {
     const wishlist = getWishlist(req.params.token);
     assertNotOwner(req, wishlist);
     const item = getItem(wishlist.id, req.params.itemId);
@@ -195,11 +197,11 @@ export function sharedRouter(db: DB): Router {
       ).run(randomUUID(), item.id, input.quantity, name, req.user?.id ?? null, now());
     }).immediate();
 
-    res.status(201).json(toSharedItem(item, purchasesFor(item.id), req.user?.id));
+    res.status(201).json(await toSharedItem(item, purchasesFor(item.id), req.user?.id));
   });
 
   // Undo a purchase. The record stays (with who reset it) so mistakes or mischief remain visible.
-  router.post('/:token/purchases/:purchaseId/revert', (req, res) => {
+  router.post('/:token/purchases/:purchaseId/revert', async (req, res) => {
     const wishlist = getWishlist(req.params.token);
     assertNotOwner(req, wishlist);
     const input = revertSchema.parse(req.body ?? {});
@@ -222,7 +224,7 @@ export function sharedRouter(db: DB): Router {
     if (result.changes === 0) throw new HttpError(409, 'ALREADY_UNDONE', 'This purchase was already undone');
 
     const item = getItem(wishlist.id, purchase.item_id);
-    res.json(toSharedItem(item, purchasesFor(item.id), req.user?.id));
+    res.json(await toSharedItem(item, purchasesFor(item.id), req.user?.id));
   });
 
   return router;

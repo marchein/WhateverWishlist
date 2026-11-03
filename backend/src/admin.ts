@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import type { DB } from './db.js';
 import { passwordSchema, registerSchema } from './validation.js';
+import { imageCache } from './services/image-cache.js';
+import type { ItemRow } from './models.js';
 
 export interface AdminUser {
   id: string;
@@ -50,4 +52,43 @@ export async function resetPassword(db: DB, email: string, password: string): Pr
   `).run(hash, user.id);
   if (result.changes !== 1) throw new Error('User no longer exists; password was not reset');
   return user.email;
+}
+
+export async function cacheAllImages(db: DB): Promise<{ cached: number; skipped: number; errors: number }> {
+  const items = db.prepare('SELECT * FROM items WHERE image_url IS NOT NULL').all() as ItemRow[];
+  
+  let cached = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (const item of items) {
+    if (!item.image_url) {
+      skipped++;
+      continue;
+    }
+
+    // Skip local uploads - they're already on our server
+    if (item.image_url.startsWith('/uploads/') || item.image_url.startsWith('/_cache/')) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      const cachedUrl = await imageCache.cacheImage(item.image_url);
+      
+      // Update the database if the URL changed (was cached)
+      if (cachedUrl !== item.image_url) {
+        db.prepare('UPDATE items SET image_url = ? WHERE id = ?').run(cachedUrl, item.id);
+        cached++;
+        console.log(`[Admin] Cached image for item ${item.id}: ${item.image_url} -> ${cachedUrl}`);
+      } else {
+        skipped++;
+      }
+    } catch (error) {
+      errors++;
+      console.error(`[Admin] Failed to cache image for item ${item.id}:`, error);
+    }
+  }
+
+  return { cached, skipped, errors };
 }

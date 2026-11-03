@@ -3,7 +3,8 @@ import { Router, type Request } from 'express';
 import { requireAuth } from '../auth.js';
 import type { DB } from '../db.js';
 import { notFound } from '../errors.js';
-import { now, toFollowedWishlistDto, toItemDto, toWishlistDto, type ItemRow, type WishlistRow } from '../models.js';
+import { now, toFollowedWishlistDto, toItemDto, toItemDtoWithCache, toWishlistDto, type ItemRow, type WishlistRow } from '../models.js';
+import { imageCache } from '../services/image-cache.js';
 import {
   createItemSchema,
   createWishlistSchema,
@@ -106,7 +107,7 @@ export function wishlistsRouter(db: DB): Router {
   });
 
   // Owner view: deliberately contains no purchase information so the surprise isn't spoiled.
-  router.get('/:id', (req, res) => {
+  router.get('/:id', async (req, res) => {
     const wishlist = getOwnedWishlist(req.params.id, req.user!.id);
     const items = db
       .prepare('SELECT * FROM items WHERE wishlist_id = ? ORDER BY priority DESC, created_at ASC')
@@ -114,7 +115,7 @@ export function wishlistsRouter(db: DB): Router {
     res.json({
       ...toWishlistDto({ ...wishlist, item_count: items.length }),
       followerCount: followersOf(wishlist.id).length,
-      items: items.map(toItemDto),
+      items: await Promise.all(items.map(item => toItemDtoWithCache(item, imageCache))),
     });
   });
 
@@ -173,7 +174,7 @@ export function wishlistsRouter(db: DB): Router {
     res.status(204).end();
   });
 
-  router.post('/:id/items', (req, res) => {
+  router.post('/:id/items', async (req, res) => {
     const wishlist = getOwnedWishlist(req.params.id, req.user!.id);
     const input = createItemSchema.parse(req.body);
     const timestamp = now();
@@ -196,10 +197,10 @@ export function wishlistsRouter(db: DB): Router {
        VALUES (@id, @wishlist_id, @title, @notes, @image_url, @price, @currency, @priority, @quantity, @links, @created_at, @updated_at)`,
     ).run(row);
     touchWishlist(wishlist.id);
-    res.status(201).json(toItemDto(row));
+    res.status(201).json(await toItemDtoWithCache(row, imageCache));
   });
 
-  router.patch('/:id/items/:itemId', (req, res) => {
+  router.patch('/:id/items/:itemId', async (req, res) => {
     const wishlist = getOwnedWishlist(req.params.id, req.user!.id);
     const item = getItem(wishlist.id, req.params.itemId);
     const input = updateItemSchema.parse(req.body);
@@ -221,7 +222,7 @@ export function wishlistsRouter(db: DB): Router {
       });
       touchWishlist(wishlist.id);
     }
-    res.json(toItemDto(getItem(wishlist.id, item.id)));
+    res.json(await toItemDtoWithCache(getItem(wishlist.id, item.id), imageCache));
   });
 
   router.delete('/:id/items/:itemId', (req, res) => {

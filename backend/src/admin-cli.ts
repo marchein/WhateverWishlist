@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { ZodError } from 'zod';
 import { passwordFromPrompt, passwordFromStdin } from './admin-input.js';
-import { listUsers, resetPassword } from './admin.js';
+import { listUsers, resetPassword, cacheAllImages } from './admin.js';
 import { config } from './config.js';
 import { openDatabase } from './db.js';
 
@@ -15,6 +15,10 @@ const HELP = `Wishlist administration (requires access to the API container and 
 
   node dist/admin-cli.js reset-password <email> --stdin
       Read one password line from stdin for automation.
+
+  node dist/admin-cli.js cache-images
+      Cache all external images from items. This allows images to be served from your local server.
+      WARNING: This may take a long time if you have many items with external images.
 
 Password resets sign the user out on every device. Public share links stay valid.
 Passwords must be at least 8 characters and at most 72 UTF-8 bytes.
@@ -30,16 +34,20 @@ async function main(): Promise<void> {
   const usersCommand = command === 'users' && args.length === 1;
   const resetCommand = command === 'reset-password' && !!email &&
     (args.length === 2 || (args.length === 3 && option === '--stdin'));
-  if (!usersCommand && !resetCommand) throw new Error(`Unknown command or arguments. Use --help for usage.`);
+  const cacheCommand = command === 'cache-images' && args.length === 1;
+  if (!usersCommand && !resetCommand && !cacheCommand) throw new Error(`Unknown command or arguments. Use --help for usage.`);
   if (!existsSync(config.databaseFile)) throw new Error('Database does not exist. Start the API first and check DATABASE_FILE.');
   const db = openDatabase(config.databaseFile);
   try {
     if (usersCommand) {
       process.stdout.write(`${JSON.stringify({ users: listUsers(db) }, null, 2)}\n`);
-    } else {
+    } else if (resetCommand) {
       const password = option === '--stdin' ? await passwordFromStdin() : await passwordFromPrompt();
       const account = await resetPassword(db, email, password);
       process.stdout.write(`Password reset for ${account}. All login sessions revoked. Shared links unchanged.\n`);
+    } else if (cacheCommand) {
+      const result = await cacheAllImages(db);
+      process.stdout.write(`Cached ${result.cached} images. Skipped ${result.skipped} (already cached or local). Errors: ${result.errors}.\n`);
     }
   } finally {
     db.close();
