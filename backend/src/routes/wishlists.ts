@@ -115,7 +115,7 @@ export function wishlistsRouter(db: DB): Router {
     res.json({
       ...toWishlistDto({ ...wishlist, item_count: items.length }),
       followerCount: followersOf(wishlist.id).length,
-      items: await Promise.all(items.map(item => toItemDtoWithCache(item, imageCache))),
+      items: items.map(item => toItemDto(item)),
     });
   });
 
@@ -197,7 +197,7 @@ export function wishlistsRouter(db: DB): Router {
        VALUES (@id, @wishlist_id, @title, @notes, @image_url, @price, @currency, @priority, @quantity, @links, @created_at, @updated_at)`,
     ).run(row);
     touchWishlist(wishlist.id);
-    res.status(201).json(await toItemDtoWithCache(row, imageCache));
+    res.status(201).json(toItemDto(row));
   });
 
   router.patch('/:id/items/:itemId', async (req, res) => {
@@ -222,7 +222,7 @@ export function wishlistsRouter(db: DB): Router {
       });
       touchWishlist(wishlist.id);
     }
-    res.json(await toItemDtoWithCache(getItem(wishlist.id, item.id), imageCache));
+    res.json(toItemDto(getItem(wishlist.id, item.id)));
   });
 
   router.delete('/:id/items/:itemId', (req, res) => {

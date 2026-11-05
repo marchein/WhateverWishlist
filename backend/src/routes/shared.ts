@@ -8,7 +8,7 @@ import {
   activePurchasedQuantity,
   now,
   toItemDto,
-  toItemDtoWithCache,
+  toItemDtoWithCachePreference,
   toPurchaseDto,
   type ItemRow,
   type PurchaseRow,
@@ -66,7 +66,7 @@ export function sharedRouter(db: DB): Router {
     db.prepare('SELECT * FROM purchases WHERE item_id = ? ORDER BY created_at ASC').all(itemId) as PurchaseRow[];
 
   const toSharedItem = async (item: ItemRow, purchases: PurchaseRow[], viewerId: string | undefined) => ({
-    ...(await toItemDtoWithCache(item, imageCache)),
+    ...(await toItemDtoWithCachePreference(item, imageCache)),
     purchasedQuantity: activePurchasedQuantity(purchases),
     purchases: purchases.map((p) => toPurchaseDto(p, viewerId)),
   });
@@ -130,7 +130,7 @@ export function sharedRouter(db: DB): Router {
     };
 
     if (isOwner) {
-      res.json({ wishlist: header, isOwner, isFollowing: false, items: await Promise.all(items.map(item => toItemDtoWithCache(item, imageCache))) });
+      res.json({ wishlist: header, isOwner, isFollowing: false, items: await Promise.all(items.map(item => toItemDtoWithCachePreference(item, imageCache))) });
       return;
     }
 
