@@ -114,6 +114,45 @@ export const toItemDtoWithCache = async (
   };
 };
 
+export const toItemDtoWithCachePreference = async (
+  row: ItemRow,
+  imageCache: { 
+    getCachedImageUrl: (url: string) => Promise<string | null>;
+    cacheImage: (url: string) => Promise<string>;
+  },
+) => {
+  let imageUrl = row.image_url;
+
+  // If it's an HTTP URL, prefer the cached version
+  if (imageUrl && /^https?:\/\//.test(imageUrl)) {
+    const cachedUrl = await imageCache.getCachedImageUrl(imageUrl).catch(() => null);
+    if (cachedUrl) {
+      // Use cached version for faster loading
+      imageUrl = cachedUrl;
+    } else {
+      // Cache the image in the background for next time
+      imageCache.cacheImage(imageUrl).catch(() => {
+        // If caching fails, we still use the original URL
+      });
+    }
+  }
+
+  return {
+    id: row.id,
+    wishlistId: row.wishlist_id,
+    title: row.title,
+    notes: row.notes,
+    imageUrl,
+    price: row.price,
+    currency: row.currency,
+    priority: row.priority,
+    quantity: row.quantity,
+    links: JSON.parse(row.links) as string[],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+};
+
 export const toPurchaseDto = (row: PurchaseRow, viewerId: string | undefined) => ({
   id: row.id,
   quantity: row.quantity,
