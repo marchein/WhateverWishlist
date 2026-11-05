@@ -147,10 +147,6 @@ The final newline is optional. Do not put passwords in command arguments, shell 
 files. Protect and remove any temporary password file. Invalid input or an unknown user exits nonzero
 without changing the account. Interactive prompts require a TTY, so omit `-T` for interactive resets.
 
-```bash
-docker compose exec -T api node dist/admin-cli.js --help
-```
-
 For local development, the equivalent is `npm run admin --prefix backend -- users` or
 `npm run admin --prefix backend -- reset-password person@example.com`. The configured database must
 already exist; the CLI will not silently create an empty one.
@@ -169,14 +165,26 @@ This reduces dependency on third-party servers and improves performance. The com
 - Respects cache size limits (default: 200 MB; configured via `IMAGE_CACHE_MAX_SIZE`)
 - May take a long time if you have many items with external images
 
-The original image URLs stay in the database; caching is completely transparent to the web app.
-Once cached, images are served from `/_cache/<hash>` with immutable cache headers (1 year).
+The original image URLs stay in the database and in the item form. The API additionally returns a
+`displayImageUrl` for each item: the `/_cache/<hash>` path when the image is cached, otherwise the original
+URL. Wishlist and shared views render `displayImageUrl`, so cached images are served from your server.
+Images that are not cached yet are cached in the background the next time an item is loaded. Cached
+images are served from `/_cache/<hash>` with immutable cache headers (1 year).
 
 For local development:
 
 ```bash
 npm run admin --prefix backend -- cache-images
 ```
+
+### Show all available commands
+
+```bash
+docker compose exec -T api node dist/admin-cli.js --help
+```
+
+Available commands: `users`, `reset-password <email> [--stdin]` and `cache-images`.
+The image recovery tool below is a separate script.
 
 ### Recover corrupted image URLs
 
@@ -186,7 +194,7 @@ If items have cache URLs (`/_cache/<hash>`) instead of original URLs in the data
 docker compose exec api node dist/admin-recover-images.js
 ```
 
-This interactive tool guides you through:
+This interactive tool asks for input, so run it **without** `-T`. It guides you through:
 
 - Automatically restoring URLs from the cache manifest (if available)
 - Manually entering original URLs for items not in the manifest
@@ -200,13 +208,11 @@ docker compose pull
 docker compose up -d --no-build
 ```
 
-For local development:
+For local development, run from the `backend/` directory:
 
 ```bash
-npm run admin --prefix backend -- recover-images
+npx tsx src/admin-recover-images.ts
 ```
-
-Or use `npx tsx src/admin-recover-images.ts` if the `admin` script is not available.
 
 ## Back up and restore
 

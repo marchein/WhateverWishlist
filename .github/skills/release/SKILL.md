@@ -130,10 +130,11 @@ Generate comprehensive release notes from commits since the last version and cre
 ```bash
 # Extract commit messages between tags for release notes
 PREV_TAG=$(git tag --sort=-v:refname | head -1)
-COMMITS=$(git log $PREV_TAG..v<version> --pretty=format:"- %s" --grep-reflog="" || echo "- Initial release")
+COMMITS=$(git log $PREV_TAG..v<version> --pretty=format:"- %s")
+[ -n "$COMMITS" ] || COMMITS="- Initial release"
 
-# Create release with notes
-gh release create v<version> --title "Release <version>" \
+# Create release with notes; the title must be exactly the tag name (v<version>)
+gh release create v<version> --title "v<version>" \
   --notes "$(cat <<EOF
 ## Changes
 

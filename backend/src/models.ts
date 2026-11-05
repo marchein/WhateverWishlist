@@ -70,70 +70,25 @@ export const toFollowedWishlistDto = (
   followedAt: row.followed_at,
 });
 
-export const toItemDto = (row: ItemRow) => ({
-  id: row.id,
-  wishlistId: row.wishlist_id,
-  title: row.title,
-  notes: row.notes,
-  imageUrl: row.image_url,
-  price: row.price,
-  currency: row.currency,
-  priority: row.priority,
-  quantity: row.quantity,
-  links: JSON.parse(row.links) as string[],
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
+interface ImageCacheLookup {
+  getCachedImageUrl: (url: string) => Promise<string | null>;
+  cacheImage: (url: string) => Promise<string>;
+}
 
-export const toItemDtoWithCache = async (
-  row: ItemRow,
-  imageCache: { cacheImage: (url: string) => Promise<string>; getOriginalUrl: (hash: string) => string | null },
-) => {
+/**
+ * `imageUrl` is the URL the user entered and is what the edit form works with. `displayImageUrl` is what
+ * should be rendered: the cached copy when one exists, otherwise the original URL.
+ */
+export const toItemDto = async (row: ItemRow, imageCache: ImageCacheLookup) => {
   let displayImageUrl = row.image_url;
 
-  // Cache the image if it's an HTTP URL, but still display the original URL
   if (row.image_url && /^https?:\/\//.test(row.image_url)) {
-    await imageCache.cacheImage(row.image_url).catch(() => {
-      // If caching fails, we still display the original URL
-    });
-  }
-
-  return {
-    id: row.id,
-    wishlistId: row.wishlist_id,
-    title: row.title,
-    notes: row.notes,
-    imageUrl: displayImageUrl,
-    price: row.price,
-    currency: row.currency,
-    priority: row.priority,
-    quantity: row.quantity,
-    links: JSON.parse(row.links) as string[],
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-};
-
-export const toItemDtoWithCachePreference = async (
-  row: ItemRow,
-  imageCache: { 
-    getCachedImageUrl: (url: string) => Promise<string | null>;
-    cacheImage: (url: string) => Promise<string>;
-  },
-) => {
-  let imageUrl = row.image_url;
-
-  // If it's an HTTP URL, prefer the cached version
-  if (imageUrl && /^https?:\/\//.test(imageUrl)) {
-    const cachedUrl = await imageCache.getCachedImageUrl(imageUrl).catch(() => null);
+    const cachedUrl = await imageCache.getCachedImageUrl(row.image_url).catch(() => null);
     if (cachedUrl) {
-      // Use cached version for faster loading
-      imageUrl = cachedUrl;
+      displayImageUrl = cachedUrl;
     } else {
-      // Cache the image in the background for next time
-      imageCache.cacheImage(imageUrl).catch(() => {
-        // If caching fails, we still use the original URL
-      });
+      // Cache in the background so the next request is served locally.
+      imageCache.cacheImage(row.image_url).catch(() => {});
     }
   }
 
@@ -142,7 +97,8 @@ export const toItemDtoWithCachePreference = async (
     wishlistId: row.wishlist_id,
     title: row.title,
     notes: row.notes,
-    imageUrl,
+    imageUrl: row.image_url,
+    displayImageUrl,
     price: row.price,
     currency: row.currency,
     priority: row.priority,

@@ -34,6 +34,8 @@ export interface Item {
   title: string;
   notes: string | null;
   imageUrl: string | null;
+  /** Cached copy of imageUrl when available; render this, but edit imageUrl. */
+  displayImageUrl: string | null;
   price: number | null;
   currency: string | null;
   priority: number;

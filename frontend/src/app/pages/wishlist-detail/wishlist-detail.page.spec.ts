@@ -97,7 +97,7 @@ describe('Owner editing at the canonical share address', () => {
 
   it('shows wish notes and orders wishes like the guest view', async () => {
     const item = (id: string, createdAt: string, priority: number, notes: string | null) => ({
-      id, wishlistId: wishlist.id, title: id, notes, imageUrl: null, price: null, currency: null,
+      id, wishlistId: wishlist.id, title: id, notes,       imageUrl: null, displayImageUrl: null, currency: null,
       priority, quantity: 1, links: [], createdAt, updatedAt: createdAt,
     });
     getWishlist.mockResolvedValue({

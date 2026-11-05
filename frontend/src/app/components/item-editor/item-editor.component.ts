@@ -104,6 +104,14 @@ export class ItemEditorComponent implements OnInit {
     this.form.controls.imageUrl.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.imageFailed.set(false));
   }
 
+  /** An unchanged saved URL previews the cached copy; a new URL is shown as typed. */
+  get previewImageUrl(): string | null {
+    const url = this.form.controls.imageUrl.value;
+    if (!url) return null;
+    if (this.item?.imageUrl === url && this.item.displayImageUrl) return this.item.displayImageUrl;
+    return url;
+  }
+
   ngOnInit(): void {
     if (!this.item) return;
     this.form.patchValue({
