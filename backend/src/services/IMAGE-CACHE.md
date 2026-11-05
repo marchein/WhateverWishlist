@@ -2,22 +2,36 @@
 
 ## Overview
 
-This feature automatically caches images fetched from external sources to reduce dependency on third-party servers and improve performance.
+This feature automatically caches images fetched from external sources to reduce dependency on third-party servers and improve performance. The system transparently caches images while maintaining the original image URL in the database, ensuring frontend compatibility.
 
 ## How it works
 
-1. **Automatic Caching**: When the scraper fetches images from product pages or direct image links, they are automatically optimized and cached locally.
+1. **Automatic Caching**: When item images are stored, external HTTP(S) URLs are automatically optimized and cached locally.
 
-2. **Image Optimization**: Images are automatically converted to progressive JPEG format with 75% quality to reduce file size while maintaining visual quality.
+2. **Database Storage**: The original image URL is always stored in the database, not the cache path. This ensures:
+   - Frontend receives the original URL
+   - No validation issues when updating items
+   - Cache is completely transparent to the frontend
 
-3. **Cache Size Management**: The cache respects a configurable maximum size limit (default: 200MB). When the limit is exceeded:
+3. **Image Optimization**: Images are automatically converted to progressive JPEG format with 75% quality to reduce file size while maintaining visual quality.
+
+4. **Cache Size Management**: The cache respects a configurable maximum size limit (default: 200MB). When the limit is exceeded:
    - Oldest unused images are deleted first
    - The deletion is logged with information about freed space
    - Newly cached images are prioritized over old ones
 
-4. **Automatic Cleanup**: Images that haven't been accessed for a configurable period (default: 30 days) are automatically deleted.
+5. **Automatic Cleanup**: Images that haven't been accessed for a configurable period (default: 30 days) are automatically deleted.
 
-5. **Unique Identification**: Each cached image is identified by a SHA256 hash of its URL, ensuring the same image isn't cached twice.
+6. **Unique Identification**: Each cached image is identified by a SHA256 hash of its URL, ensuring the same image isn't cached twice.
+
+## Validation
+
+The image URL validation accepts:
+- HTTP(S) URLs (e.g., `https://example.com/image.jpg`)
+- Uploaded images (e.g., `/uploads/123e4567-e89b-12d3-a456-426614174000.jpg`)
+- Cached images (e.g., `/_cache/0123456789abcdef`) if the cache file exists
+
+This allows manual use of cache URLs if needed, while the automatic flow keeps the frontend working with original URLs.
 
 ## Configuration
 
@@ -52,6 +66,7 @@ The cached images are served via the `/_cache/<hash>` endpoint with:
 - **Performance**: Cached images load faster for subsequent requests
 - **Bandwidth**: JPEG optimization reduces bandwidth usage
 - **Storage Control**: Configurable limits prevent disk space issues
+- **Frontend Transparency**: Cache is completely transparent to the frontend, which always works with original URLs
 
 ## Logging
 

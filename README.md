@@ -49,6 +49,9 @@ Never commit the real `.env`.
 | `TRUST_PROXY` | `2` for web container + HTTPS proxy; `1` when only the web container is in front of the API. |
 | `CORS_ORIGINS` | Additional allowed origins; usually empty because the web app is served from the same origin. |
 | `SCRAPER_ACCEPT_LANGUAGE` | Language requested from shops when reading product pages. |
+| `IMAGE_CACHE_DIR` | Directory to store cached images; default `data/image-cache`. Relative to the data volume. |
+| `IMAGE_CACHE_MAX_SIZE` | Maximum cache size in bytes; default `209715200` (200 MB). Examples: `104857600` (100 MB), `524288000` (500 MB), `1073741824` (1 GB). |
+| `IMAGE_CACHE_MAX_AGE` | Days before deleting unused cached images; default `30`. |
 
 If the GitHub container packages are private, first run `docker login ghcr.io -u YOUR_GITHUB_USERNAME`
 and enter a token with `read:packages` permission. Public packages do not require login.
@@ -151,6 +154,59 @@ docker compose exec -T api node dist/admin-cli.js --help
 For local development, the equivalent is `npm run admin --prefix backend -- users` or
 `npm run admin --prefix backend -- reset-password person@example.com`. The configured database must
 already exist; the CLI will not silently create an empty one.
+
+### Cache external images locally
+
+```bash
+docker compose exec -T api node dist/admin-cli.js cache-images
+```
+
+Downloads and optimizes all external images from product shops and caches them on your server.
+This reduces dependency on third-party servers and improves performance. The command:
+
+- Automatically optimizes images to progressive JPEG with 75% quality
+- Skips images that are already cached or already stored locally
+- Respects cache size limits (default: 200 MB; configured via `IMAGE_CACHE_MAX_SIZE`)
+- May take a long time if you have many items with external images
+
+The original image URLs stay in the database; caching is completely transparent to the web app.
+Once cached, images are served from `/_cache/<hash>` with immutable cache headers (1 year).
+
+For local development:
+
+```bash
+npm run admin --prefix backend -- cache-images
+```
+
+### Recover corrupted image URLs
+
+If items have cache URLs (`/_cache/<hash>`) instead of original URLs in the database, run the recovery tool:
+
+```bash
+docker compose exec api node dist/admin-recover-images.js
+```
+
+This interactive tool guides you through:
+
+- Automatically restoring URLs from the cache manifest (if available)
+- Manually entering original URLs for items not in the manifest
+- Updating the database and manifest in sync
+
+This should not happen with the current version; if it does, ensure all containers are running
+the latest code:
+
+```bash
+docker compose pull
+docker compose up -d --no-build
+```
+
+For local development:
+
+```bash
+npm run admin --prefix backend -- recover-images
+```
+
+Or use `npx tsx src/admin-recover-images.ts` if the `admin` script is not available.
 
 ## Back up and restore
 

@@ -17,11 +17,15 @@ const HELP = `Wishlist administration (requires access to the API container and 
       Read one password line from stdin for automation.
 
   node dist/admin-cli.js cache-images
-      Cache all external images from items. This allows images to be served from your local server.
-      WARNING: This may take a long time if you have many items with external images.
+      Cache all external images from items locally. This reduces dependency on third-party
+      servers and improves performance. May take a long time with many external images.
+      Original URLs remain in the database; caching is transparent to the web app.
 
 Password resets sign the user out on every device. Public share links stay valid.
 Passwords must be at least 8 characters and at most 72 UTF-8 bytes.
+
+Other administration tools:
+  - node dist/admin-recover-images.js — Recover items with corrupted cache URLs
 `;
 
 async function main(): Promise<void> {

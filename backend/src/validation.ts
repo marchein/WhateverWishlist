@@ -1,6 +1,10 @@
 import { z } from 'zod';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { config } from './config.js';
 
 export const UPLOAD_PATH_RE = /^\/uploads\/[a-f0-9-]{36}\.(jpg|png|gif|webp)$/;
+export const CACHE_PATH_RE = /^\/_cache\/[a-f0-9]{16}$/;
 
 export function isHttpUrl(value: string): boolean {
   try {
@@ -9,6 +13,13 @@ export function isHttpUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isCachedImage(value: string): boolean {
+  if (!CACHE_PATH_RE.test(value)) return false;
+  const hash = value.substring('/_cache/'.length);
+  const filePath = path.join(config.imageCache.dir, hash);
+  return existsSync(filePath);
 }
 
 const httpUrl = z.string().trim().max(2048).refine(isHttpUrl, 'Must be an http(s) URL');
@@ -54,7 +65,10 @@ const itemFields = {
     .string()
     .trim()
     .max(2048)
-    .refine((value) => isHttpUrl(value) || UPLOAD_PATH_RE.test(value), 'Must be an http(s) URL or an uploaded image')
+    .refine(
+      (value) => isHttpUrl(value) || UPLOAD_PATH_RE.test(value) || isCachedImage(value),
+      'Must be an http(s) URL, an uploaded image, or a cached image',
+    )
     .nullish()
     .transform((value) => value || null),
   price: z

@@ -76,9 +76,8 @@ export async function cacheAllImages(db: DB): Promise<{ cached: number; skipped:
     try {
       const cachedUrl = await imageCache.cacheImage(item.image_url);
       
-      // Update the database if the URL changed (was cached)
+      // Only log and count, don't update the database - keep the original URL
       if (cachedUrl !== item.image_url) {
-        db.prepare('UPDATE items SET image_url = ? WHERE id = ?').run(cachedUrl, item.id);
         cached++;
         console.log(`[Admin] Cached image for item ${item.id}: ${item.image_url} -> ${cachedUrl}`);
       } else {
