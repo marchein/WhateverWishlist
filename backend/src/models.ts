@@ -85,14 +85,25 @@ export const toItemDto = (row: ItemRow) => ({
   updatedAt: row.updated_at,
 });
 
-export const toItemDtoWithCache = async (row: ItemRow, imageCache: { cacheImage: (url: string) => Promise<string> }) => {
-  const imageUrl = row.image_url ? await imageCache.cacheImage(row.image_url) : null;
+export const toItemDtoWithCache = async (
+  row: ItemRow,
+  imageCache: { cacheImage: (url: string) => Promise<string>; getOriginalUrl: (hash: string) => string | null },
+) => {
+  let displayImageUrl = row.image_url;
+
+  // Cache the image if it's an HTTP URL, but still display the original URL
+  if (row.image_url && /^https?:\/\//.test(row.image_url)) {
+    await imageCache.cacheImage(row.image_url).catch(() => {
+      // If caching fails, we still display the original URL
+    });
+  }
+
   return {
     id: row.id,
     wishlistId: row.wishlist_id,
     title: row.title,
     notes: row.notes,
-    imageUrl,
+    imageUrl: displayImageUrl,
     price: row.price,
     currency: row.currency,
     priority: row.priority,

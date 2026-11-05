@@ -242,6 +242,11 @@ export class ImageCache {
     }
   }
 
+  getOriginalUrl(hash: string): string | null {
+    const entry = this.manifest.get(hash);
+    return entry?.url ?? null;
+  }
+
   async deleteImage(hash: string): Promise<void> {
     const filePath = path.join(this.cacheDir, hash);
     try {
