@@ -73,7 +73,7 @@ describe('Shared wishlist owner and recipient views', () => {
     await fixture.componentInstance.load();
     fixture.detectChanges();
     const added = { ...response(true), items: [{
-      id: 'new-item', wishlistId: 'list-id', title: 'Added meanwhile', notes: null, imageUrl: null, price: null,
+      id: 'new-item', wishlistId: 'list-id', title: 'Added meanwhile', notes: null, imageUrl: null, displayImageUrl: null, price: null,
       currency: null, priority: 3, quantity: 1, links: [], createdAt: '2026-01-01', updatedAt: '2026-01-01',
     }] };
     getShared.mockResolvedValue(added);

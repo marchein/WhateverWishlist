@@ -98,8 +98,8 @@
             @for (item of sortedItems(); track item.id) {
               <ion-item button detail="false" (click)="openEditor(item)">
                 <div slot="start" class="tile thumb" aria-hidden="true">
-                  @if (item.imageUrl) {
-                    <img [src]="item.imageUrl | assetUrl" alt="" />
+                  @if (item.displayImageUrl) {
+                    <img [src]="item.displayImageUrl | assetUrl" alt="" />
                   } @else {
                     <ion-icon name="gift-outline" />
                   }

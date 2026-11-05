@@ -108,7 +108,9 @@ export async function scrape(input: string, acceptLanguage: string): Promise<Scr
           : msg('HTTP_ERROR', `The website answered with an error (HTTP ${page.status}).`, params),
       );
     } else if (page.contentType.startsWith('image/')) {
-      result.image = await imageCache.cacheImage(page.finalUrl);
+      // The item keeps the original URL; the cached copy is served as displayImageUrl.
+      result.image = page.finalUrl;
+      void imageCache.cacheImage(page.finalUrl).catch(() => {});
       result.sources.image = 'link-itself';
       foundOnPage++;
     } else if (page.html) {
@@ -119,7 +121,8 @@ export async function scrape(input: string, acceptLanguage: string): Promise<Scr
         );
       } else {
         result.title = extracted.title ?? null;
-        result.image = extracted.image ? await imageCache.cacheImage(extracted.image) : null;
+        result.image = extracted.image ?? null;
+        if (extracted.image) void imageCache.cacheImage(extracted.image).catch(() => {});
         result.price = extracted.price ?? null;
         result.currency = extracted.currency ?? null;
         result.siteName = extracted.siteName ?? null;

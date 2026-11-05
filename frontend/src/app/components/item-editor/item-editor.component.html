@@ -126,8 +126,8 @@
 
     <div class="image-row">
       <div class="preview">
-        @if (form.controls.imageUrl.value && !imageFailed()) {
-          <img [src]="form.controls.imageUrl.value | assetUrl" alt="" (error)="imageFailed.set(true)" />
+        @if (previewImageUrl && !imageFailed()) {
+          <img [src]="previewImageUrl | assetUrl" alt="" (error)="imageFailed.set(true)" />
         } @else {
           <ion-icon name="image-outline" color="medium" />
         }

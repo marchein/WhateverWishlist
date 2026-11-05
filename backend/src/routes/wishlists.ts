@@ -3,7 +3,7 @@ import { Router, type Request } from 'express';
 import { requireAuth } from '../auth.js';
 import type { DB } from '../db.js';
 import { notFound } from '../errors.js';
-import { now, toFollowedWishlistDto, toItemDto, toItemDtoWithCache, toWishlistDto, type ItemRow, type WishlistRow } from '../models.js';
+import { now, toFollowedWishlistDto, toItemDto, toWishlistDto, type ItemRow, type WishlistRow } from '../models.js';
 import { imageCache } from '../services/image-cache.js';
 import {
   createItemSchema,
@@ -115,7 +115,7 @@ export function wishlistsRouter(db: DB): Router {
     res.json({
       ...toWishlistDto({ ...wishlist, item_count: items.length }),
       followerCount: followersOf(wishlist.id).length,
-      items: items.map(item => toItemDto(item)),
+      items: await Promise.all(items.map(item => toItemDto(item, imageCache))),
     });
   });
 
@@ -197,7 +197,7 @@ export function wishlistsRouter(db: DB): Router {
        VALUES (@id, @wishlist_id, @title, @notes, @image_url, @price, @currency, @priority, @quantity, @links, @created_at, @updated_at)`,
     ).run(row);
     touchWishlist(wishlist.id);
-    res.status(201).json(toItemDto(row));
+    res.status(201).json(await toItemDto(row, imageCache));
   });
 
   router.patch('/:id/items/:itemId', async (req, res) => {
@@ -222,7 +222,7 @@ export function wishlistsRouter(db: DB): Router {
       });
       touchWishlist(wishlist.id);
     }
-    res.json(toItemDto(getItem(wishlist.id, item.id)));
+    res.json(await toItemDto(getItem(wishlist.id, item.id), imageCache));
   });
 
   router.delete('/:id/items/:itemId', (req, res) => {

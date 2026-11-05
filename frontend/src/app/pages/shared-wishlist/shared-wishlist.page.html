@@ -97,8 +97,8 @@
     @for (item of visibleItems(); track item.id) {
       <ion-card [class.done]="!d.isOwner && isBought(item)">
         <div class="item">
-          @if (item.imageUrl) {
-            <img class="image" [src]="item.imageUrl | assetUrl" alt="" />
+          @if (item.displayImageUrl) {
+            <img class="image" [src]="item.displayImageUrl | assetUrl" alt="" />
           }
           <div class="info">
             <ion-card-header>

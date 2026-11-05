@@ -7,6 +7,7 @@ const item = (id: string, overrides: Partial<SharedItem>): SharedItem => ({
   title: id,
   notes: null,
   imageUrl: null,
+  displayImageUrl: null,
   price: null,
   currency: 'EUR',
   priority: 3,
