@@ -24,8 +24,7 @@ Do **not** use for commits or PRs without a release; follow only the relevant st
   working around it (no `--no-verify`, no force-push, no moving existing tags).
 - Never commit secrets, `.env`, `backend/data/` (databases, uploads, `jwt-secret`) or local editor
   settings such as `.vscode/settings.json`. Review `git status` before staging.
-- There are no GitHub Releases: the tag alone is the release (see README badge note).
-  Don't create one unless asked.
+- GitHub Releases are automatically created for each version during step 9.
 - Commits end with the trailer
   `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
 
@@ -124,9 +123,47 @@ gh run view "$RUN" --json conclusion,jobs -q '.conclusion, (.jobs[] | "\(.name):
 Expect `test`, `publish (api, backend)` and `publish (web, frontend)` to succeed. CI rejects the
 tag if it doesn't match the package versions.
 
-### 9. Report
+### 9. Create GitHub Release
 
-Summarize for the user: version, branch, commit, PR link, merge commit, tag, workflow result and
-published image tags (`<version>`, `<major>.<minor>`, `<major>`, `latest`, `sha-<commit>`), plus
+Generate comprehensive release notes from commits since the last version and create the GitHub Release:
+
+```bash
+# Extract commit messages between tags for release notes
+PREV_TAG=$(git tag --sort=-v:refname | head -1)
+COMMITS=$(git log $PREV_TAG..v<version> --pretty=format:"- %s" --grep-reflog="" || echo "- Initial release")
+
+# Create release with notes
+gh release create v<version> --title "Release <version>" \
+  --notes "$(cat <<EOF
+## Changes
+
+$COMMITS
+
+## Deployment
+
+\`\`\`bash
+docker compose pull
+docker compose up -d --no-build
+\`\`\`
+
+## Docker Images
+
+Published to ghcr.io/marchein/whateverwishlist-{api,web}:
+- $<version> (specific version)
+- <major>.<minor> (minor track)
+- <major> (major track)
+- latest (default)
+- sha-<commit-short> (commit reference)
+EOF
+)"
+
+# Verify release was created
+gh release view v<version>
+```
+
+### 10. Report
+
+Summarize for the user: version, branch, commit, PR link, merge commit, tag, workflow result,
+GitHub Release link, and published image tags (`<version>`, `<major>.<minor>`, `<major>`, `latest`, `sha-<commit>`), plus
 operator follow-ups (e.g. `docker compose pull && docker compose up -d --no-build`, `.env` changes).
 Remove temporary message/body files.
