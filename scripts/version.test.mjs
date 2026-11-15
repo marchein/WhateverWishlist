@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, it } from 'node:test';
@@ -27,6 +27,8 @@ beforeEach(() => {
       version: '1.0.3', lockfileVersion: 3, packages: { '': { version: '1.0.3' } },
     });
   }
+  mkdirSync(path.join(root, 'ios/Config'), { recursive: true });
+  writeFileSync(path.join(root, 'ios/Config/Version.xcconfig'), 'MARKETING_VERSION = 1.0.3\nCURRENT_PROJECT_VERSION = 1\n');
 });
 
 afterEach(() => {
@@ -58,11 +60,20 @@ it('rejects an out-of-sync lockfile root package version', () => {
   assert.notEqual(run('--check', 'v1.0.3').status, 0);
 });
 
+it('rejects a stale iOS app version', () => {
+  mkdirSync(path.join(root, 'ios/Config'), { recursive: true });
+  writeFileSync(path.join(root, 'ios/Config/Version.xcconfig'), 'MARKETING_VERSION = 1.0.2\n');
+  const result = run('--check', 'v1.0.3');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /iOS MARKETING_VERSION must match/);
+});
+
 it('synchronizes all packages and locks for a minor release through the root npm version lifecycle', () => {
   const bump = spawnSync('npm', ['version', '1.1.0', '--no-git-tag-version'], {
     cwd: root, encoding: 'utf8',
   });
   assert.equal(bump.status, 0, bump.stderr);
+  assert.match(readFileSync(path.join(root, 'ios/Config/Version.xcconfig'), 'utf8'), /^MARKETING_VERSION = 1\.1\.0$/m);
   const check = run('--check', 'v1.1.0');
   assert.equal(check.status, 0, check.stderr);
 });

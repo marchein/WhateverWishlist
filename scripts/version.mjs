@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -12,11 +12,18 @@ assert.ok(['--sync', '--check'].includes(mode), 'Usage: version.mjs --sync | --c
 assert.match(version, /^\d+\.\d+\.\d+$/, 'The root package must have a release version');
 if (tag) assert.equal(tag.replace(/^v/, ''), version, 'Release tag must match the package version');
 
+// The iOS app takes its version from this build setting.
+const iosVersionFile = path.join(root, 'ios/Config/Version.xcconfig');
+
 if (mode === '--sync') {
   for (const prefix of ['.', 'backend', 'frontend']) {
     execFileSync('npm', [
       'version', version, '--prefix', prefix, '--no-git-tag-version', '--allow-same-version', '--ignore-scripts',
     ], { cwd: root, stdio: 'inherit' });
+  }
+  if (existsSync(iosVersionFile)) {
+    const config = readFileSync(iosVersionFile, 'utf8');
+    writeFileSync(iosVersionFile, config.replace(/^MARKETING_VERSION = .*$/m, `MARKETING_VERSION = ${version}`));
   }
 }
 
@@ -26,5 +33,9 @@ for (const prefix of ['.', 'backend', 'frontend']) {
   for (const actual of [pkg.version, lock.version, lock.packages[''].version]) {
     assert.equal(actual, version, `${prefix} package and lockfile versions must match ${version}`);
   }
+}
+if (existsSync(iosVersionFile)) {
+  const iosVersion = /^MARKETING_VERSION = (.*)$/m.exec(readFileSync(iosVersionFile, 'utf8'))?.[1]?.trim();
+  assert.equal(iosVersion, version, `iOS MARKETING_VERSION must match ${version}`);
 }
 console.log(`All package and lockfile versions match ${version}${tag ? ` (${tag})` : ''}.`);

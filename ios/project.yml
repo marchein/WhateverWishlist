@@ -1,0 +1,122 @@
+# Xcode project definition. Wishlist.xcodeproj is generated from this file and checked in, so Xcode
+# works out of the box. After adding/removing files or changing settings here run `xcodegen` in ios/.
+name: Wishlist
+options:
+  bundleIdPrefix: cx.hein
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+  xcodeVersion: "27.2"
+  groupSortPosition: top
+
+configFiles:
+  Debug: Config/App.xcconfig
+  Release: Config/App.xcconfig
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    DEAD_CODE_STRIPPING: YES
+
+targets:
+  Wishlist:
+    type: application
+    platform: iOS
+    sources:
+      - path: Wishlist
+        excludes:
+          - "**/*.entitlements"
+    settings:
+      base:
+        PRODUCT_NAME: Wishlist
+        PRODUCT_BUNDLE_IDENTIFIER: $(WISHLIST_BUNDLE_ID)
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: $(WISHLIST_ENTITLEMENTS)
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ENABLE_PREVIEWS: YES
+        GENERATE_INFOPLIST_FILE: NO
+    info:
+      path: Wishlist/Info.plist
+      properties:
+        CFBundleDisplayName: $(WISHLIST_DISPLAY_NAME)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, de]
+        LSApplicationCategoryType: public.app-category.lifestyle
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchLogo
+          UIImageRespectsSafeAreaInsets: false
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        CFBundleURLTypes:
+          - CFBundleURLName: $(WISHLIST_BUNDLE_ID)
+            CFBundleURLSchemes: [$(WISHLIST_URL_SCHEME)]
+        # Allows plain http for development servers on the local network (e.g. http://localhost:3000).
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        WishlistServerURL: $(WISHLIST_SERVER_URL)
+        WishlistWebURL: $(WISHLIST_WEB_URL)
+        WishlistURLScheme: $(WISHLIST_URL_SCHEME)
+
+  WishlistTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [WishlistTests]
+    dependencies:
+      - target: Wishlist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(WISHLIST_BUNDLE_ID).tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Wishlist.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Wishlist
+        BUNDLE_LOADER: $(TEST_HOST)
+
+  WishlistUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [WishlistUITests]
+    dependencies:
+      - target: Wishlist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(WISHLIST_BUNDLE_ID).uitests
+        GENERATE_INFOPLIST_FILE: YES
+        # XCTestCase's overrides are nonisolated; the app's MainActor default breaks them.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        TEST_TARGET_NAME: Wishlist
+
+schemes:
+  Wishlist:
+    build:
+      targets:
+        Wishlist: all
+        WishlistTests: [test]
+        WishlistUITests: [test]
+    test:
+      testPlans:
+        - path: Wishlist.xctestplan
+          defaultPlan: true
+    run:
+      config: Debug
+    archive:
+      config: Release

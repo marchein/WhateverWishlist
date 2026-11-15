@@ -1,0 +1,41 @@
+{
+  "configurations" : [
+    {
+      "id" : "4B1E5C1A-2F3D-4E6B-9A7C-1D2E3F405162",
+      "name" : "English",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "language" : "en",
+    "region" : "US",
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Wishlist.xcodeproj",
+      "identifier" : "CEFD502AFA1E72E52686350D",
+      "name" : "Wishlist"
+    },
+    "uiTestingScreenshotsLifetime" : "deleteOnSuccess",
+    "userAttachmentLifetime" : "deleteOnSuccess"
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:Wishlist.xcodeproj",
+        "identifier" : "2326F8A43FA8BBC826D0D6BA",
+        "name" : "WishlistTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Wishlist.xcodeproj",
+        "identifier" : "6F469DFFAB79C68A7F8C64AF",
+        "name" : "WishlistUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

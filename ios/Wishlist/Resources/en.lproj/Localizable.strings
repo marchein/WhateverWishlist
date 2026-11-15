@@ -1,0 +1,2 @@
+/* Marks the app as available in this language so iOS picks it from the system settings (and offers
+   the per-app language choice). The texts themselves are in Core/Translations.swift. */

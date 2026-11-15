@@ -1,0 +1,3 @@
+// Kept in sync with the root package.json by `npm version` (scripts/version.mjs).
+MARKETING_VERSION = 1.3.5
+CURRENT_PROJECT_VERSION = 1
