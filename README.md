@@ -361,7 +361,8 @@ that SHA tag to test them. Use a new version/tag for a release; do not move an e
 
 ## Install as an app
 
-WhateverWishlist is a Progressive Web App; there is no separate native app.
+WhateverWishlist is a Progressive Web App. There is also a native SwiftUI app for iPhone and iPad in
+[ios/](ios/README.md), which you build yourself in Xcode and point at your server.
 
 - **iPhone/iPad (Safari):** open your address, tap **Share → Add to Home Screen**.
 - **Android/desktop (Chrome, Edge):** open your address and choose **Install app** from the browser menu.

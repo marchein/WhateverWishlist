@@ -1,0 +1,9 @@
+// Copy to Local.xcconfig (ignored by Git) to override settings from App.xcconfig for your machine.
+
+// Use your own server, e.g. a backend running on your Mac (reachable from the simulator):
+// WISHLIST_SERVER_URL = http:/$()/localhost:3000
+// The web app (for share links) then usually runs on another port:
+// WISHLIST_WEB_URL = http:/$()/localhost:8100
+
+// DEVELOPMENT_TEAM = ABCDE12345
+// WISHLIST_BUNDLE_ID = com.example.wishlist
