@@ -123,6 +123,11 @@ gh run view "$RUN" --json conclusion,jobs -q '.conclusion, (.jobs[] | "\(.name):
 Expect `test`, `publish (api, backend)` and `publish (web, frontend)` to succeed. CI rejects the
 tag if it doesn't match the package versions.
 
+The same tag starts the iOS build on Xcode Cloud, which uploads it to TestFlight (see
+[ios/README.md](../../../ios/README.md#xcode-cloud-testflight)). Its status shows up in App Store Connect
+and as a check on the tagged commit (`gh api repos/{owner}/{repo}/commits/v<version>/check-runs`).
+Don't wait for it; mention it in the report.
+
 ### 9. Create GitHub Release
 
 Generate comprehensive release notes from commits since the last version and create the GitHub Release:

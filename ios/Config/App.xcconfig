@@ -11,7 +11,8 @@ WISHLIST_SERVER_URL = https:/$()/wishlist.hein.cx
 // Origin used for share links that are sent to friends and family. Usually the same as the server.
 WISHLIST_WEB_URL = $(WISHLIST_SERVER_URL)
 
-// Host for Universal Links (only used when WISHLIST_ENTITLEMENTS points to Wishlist.entitlements).
+// Host for Universal Links, Handoff and shared passwords (Associated Domains in Wishlist.entitlements).
+// Its server must list this app in /.well-known/apple-app-site-association (IOS_APP_IDS in the server's .env).
 WISHLIST_WEB_HOST = wishlist.hein.cx
 
 WISHLIST_DISPLAY_NAME = Wishlist
@@ -21,8 +22,8 @@ WISHLIST_URL_SCHEME = whateverwishlist
 // Set your Apple Developer Team ID to run on a device (Local.xcconfig is the better place for it).
 DEVELOPMENT_TEAM =
 
-// Universal Links need a paid developer account and an apple-app-site-association file on the server.
-// Set to Wishlist/Wishlist.entitlements to enable them.
-WISHLIST_ENTITLEMENTS =
+// Associated Domains (Universal Links, Handoff, shared passwords) need a paid developer account.
+// Without one, clear this in Local.xcconfig: WISHLIST_ENTITLEMENTS =
+WISHLIST_ENTITLEMENTS = Wishlist/Wishlist.entitlements
 
 #include? "Local.xcconfig"

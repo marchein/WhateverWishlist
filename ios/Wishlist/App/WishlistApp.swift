@@ -81,10 +81,10 @@ struct RootView: View {
       }
     }
     .environment(\.openURL, OpenURLAction { url in
-      if let token = DeepLink.shareToken(from: url, scheme: model.config.urlScheme),
-        url.host() == model.config.webURL.host() || url.scheme == model.config.urlScheme
+      if url.host() == model.config.webURL.host() || url.scheme == model.config.urlScheme,
+        let destination = DeepLink.destination(from: url, scheme: model.config.urlScheme)
       {
-        router.show(token: token)
+        router.open(destination)
         return .handled
       }
       // Shop links open in an in-app browser on iOS 26, so returning to the list is one swipe away.
@@ -94,13 +94,14 @@ struct RootView: View {
       return .systemAction
     })
     .onOpenURL { url in
-      if let token = DeepLink.shareToken(from: url, scheme: model.config.urlScheme) {
-        router.show(token: token)
+      if let destination = DeepLink.destination(from: url, scheme: model.config.urlScheme) {
+        router.open(destination)
       }
     }
+    // Universal Links and Handoff from Safari (the domains come from the apple-app-site-association file).
     .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-      if let url = activity.webpageURL, let token = DeepLink.shareToken(from: url, scheme: model.config.urlScheme) {
-        router.show(token: token)
+      if let url = activity.webpageURL, let destination = DeepLink.destination(from: url, scheme: model.config.urlScheme) {
+        router.open(destination)
       }
     }
     .onChange(of: model.isLoggedIn) { _, loggedIn in

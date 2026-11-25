@@ -5,6 +5,32 @@ import Foundation
 nonisolated enum DeepLink {
   private static var tokenPattern: Regex<Substring> { /^[A-Za-z0-9_-]{8,128}$/ }
 
+  /// Screens the app can open from a link, Universal Link or Handoff (the web app's routes).
+  enum Destination: Equatable {
+    case wishlist(token: String)
+    case overview
+    case status
+  }
+
+  /// https://host/s/<token>, /wishlists and /status, or the same paths below whateverwishlist://.
+  static func destination(from url: URL, scheme: String) -> Destination? {
+    if let token = shareToken(from: url, scheme: scheme) { return .wishlist(token: token) }
+    let parts: [String]
+    switch url.scheme?.lowercased() {
+    case scheme.lowercased():
+      parts = ([url.host()].compactMap { $0 } + url.pathComponents).filter { $0 != "/" && !$0.isEmpty }
+    case "http", "https":
+      parts = url.pathComponents.filter { $0 != "/" }
+    default:
+      return nil
+    }
+    switch parts.first?.lowercased() {
+    case "wishlists": return .overview
+    case "status": return .status
+    default: return nil
+    }
+  }
+
   static func shareToken(from url: URL, scheme: String) -> String? {
     if url.scheme?.lowercased() == scheme.lowercased() {
       // whateverwishlist://s/<token> or whateverwishlist:///s/<token>

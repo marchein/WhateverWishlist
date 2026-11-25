@@ -5,6 +5,7 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:$(WISHLIST_WEB_HOST)</string>
+		<string>webcredentials:$(WISHLIST_WEB_HOST)</string>
 	</array>
 </dict>
 </plist>

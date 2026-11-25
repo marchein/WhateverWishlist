@@ -28,6 +28,12 @@ struct WishlistsView: View {
     .navigationTitle(l10n.t(.appTitle))
     .navigationSubtitleIfAvailable(greeting)
     .toolbar { toolbar }
+    .userActivity(NSUserActivityTypeBrowsingWeb, isActive: router.path.isEmpty) { activity in
+      // Handoff: continue with the overview in the browser on a Mac or iPad.
+      activity.webpageURL = model.config.webURL.appending(path: "wishlists")
+      activity.title = l10n.t(.appTitle)
+      activity.isEligibleForHandoff = true
+    }
     .task { await load() }
     .sheet(isPresented: $creating) {
       CreateWishlistSheet { wishlist in

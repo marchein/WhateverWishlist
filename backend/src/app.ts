@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
+import { appLinksRouter } from './app-links.js';
 import { config } from './config.js';
 import type { DB } from './db.js';
 import { errorHandler, notFound } from './errors.js';
@@ -39,6 +40,7 @@ export function createApp(db: DB) {
   app.get('/api/health', (_req, res) => {
     res.set('Cache-Control', 'no-store').json({ ok: true, version });
   });
+  app.use(appLinksRouter(config.ios, config.publicUrl));
   app.use('/api/auth', authLimiter, authRouter(db));
   app.use('/api/wishlists', wishlistsRouter(db));
   app.use('/api/shared', sharedWriteLimiter, sharedRouter(db));

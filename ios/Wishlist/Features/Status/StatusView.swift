@@ -55,6 +55,11 @@ struct StatusView: View {
       }
     }
     .navigationTitle(l10n.t(.statusTitle))
+    .userActivity(NSUserActivityTypeBrowsingWeb) { activity in
+      activity.webpageURL = model.config.webURL.appending(path: "status")
+      activity.title = l10n.t(.statusTitle)
+      activity.isEligibleForHandoff = true
+    }
     .task { await load() }
     .refreshable { await load() }
   }

@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { parseIosAppConfig } from './app-links.js';
 
 if (existsSync('.env')) {
   process.loadEnvFile('.env');
@@ -47,6 +48,8 @@ export const config = {
   trustProxy: parseTrustProxy(env.TRUST_PROXY),
   /** Public origin used for absolute URLs in link previews; derived from the request when unset. */
   publicUrl: env.PUBLIC_URL?.trim().replace(/\/+$/, '') || undefined,
+  /** iOS app for Universal Links, shared passwords and the Smart App Banner (all off when unset). */
+  ios: parseIosAppConfig(env),
   scraperAcceptLanguage: env.SCRAPER_ACCEPT_LANGUAGE ?? 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
   imageCache: {
     /** Cache directory for optimized images */
