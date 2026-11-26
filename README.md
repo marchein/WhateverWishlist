@@ -52,6 +52,8 @@ Never commit the real `.env`.
 | `IMAGE_CACHE_DIR` | Directory to store cached images; default `data/image-cache`. Relative to the data volume. |
 | `IMAGE_CACHE_MAX_SIZE` | Maximum cache size in bytes; default `209715200` (200 MB). Examples: `104857600` (100 MB), `524288000` (500 MB), `1073741824` (1 GB). |
 | `IMAGE_CACHE_MAX_AGE` | Days before deleting unused cached images; default `30`. |
+| `IOS_APP_IDS` | Optional. `<TeamID>.<bundle ID>` of the iOS app: share links open in the app, Handoff, shared passwords. See [ios/README.md](ios/README.md#web-integration). |
+| `IOS_APP_STORE_ID` | Optional. Numeric App Store ID; shows Safari's Smart App Banner. |
 
 If the GitHub container packages are private, first run `docker login ghcr.io -u YOUR_GITHUB_USERNAME`
 and enter a token with `read:packages` permission. Public packages do not require login.

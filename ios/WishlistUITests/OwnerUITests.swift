@@ -2,8 +2,8 @@ import XCTest
 
 /// Ada manages her own list. Owners must never see purchase information.
 final class OwnerUITests: WishlistUITestCase {
-  override func setUp() {
-    super.setUp()
+  override func setUp() async throws {
+    try await super.setUp()
     launch(signedInAs: .ada)
   }
 
@@ -15,9 +15,9 @@ final class OwnerUITests: WishlistUITestCase {
   func testOwnListShowsWishesButNoPurchases() {
     openChristmas()
     XCTAssertEqual(element("owner.shareURL").label, "https://wishlist.test/s/\(Self.christmasToken)")
-    waitFor(text("Cookbook"))
-    waitFor(text("Espresso cups"))
-    waitFor(text("Wool socks"))
+    reveal(text("Cookbook"))
+    reveal(text("Espresso cups"))
+    reveal(text("Wool socks"))
     XCTAssertFalse(element("status.Wool socks").exists)
     XCTAssertFalse(text("Bought").exists)
     XCTAssertFalse(text("Grandma").exists)
@@ -39,22 +39,27 @@ final class OwnerUITests: WishlistUITestCase {
     type("Look at this: https://shop.example/headphones", into: "editor.paste")
     tap("editor.fetch")
     waitFor(text("All details found"))
-    XCTAssertEqual(element("editor.title").value as? String, "Wireless Headphones")
+    // The form only builds rows on screen, and the fetched details push the title down; it also redraws
+    // while filling in, so wait for the value instead of reading it once.
+    waitFor(reveal(element("editor.title")), toHaveValue: "Wireless Headphones")
     tap("editor.save")
-    waitFor(text("Wireless Headphones"))
+    reveal(text("Wireless Headphones"))
   }
 
   func testAddWishManually() {
     openChristmas()
     tap("owner.addWish")
     type("Board game", into: "editor.title")
+    // The form only builds rows on screen; on small screens and iPad sheets the keyboard covers the rest.
+    reveal(element("editor.price"))
     type("19,99", into: "editor.price")
-    tap("priority.5")
+    reveal(element("priority.5")).tap()
+    reveal(element("editor.newLink"))
     type("shop.example/game", into: "editor.newLink")
     tap("editor.addLink")
-    waitFor(app.links["shop.example"])
+    waitFor(labeled("shop.example"))
     tap("editor.save")
-    waitFor(text("Board game"))
+    reveal(text("Board game"))
   }
 
   func testTitleIsRequired() {
@@ -70,8 +75,9 @@ final class OwnerUITests: WishlistUITestCase {
     openList("Cookbook")
     type("Vegan cookbook", into: "editor.title", replacing: true)
     tap("editor.save")
-    waitFor(text("Vegan cookbook"))
-    XCTAssertFalse(text("Cookbook").exists)
+    reveal(text("Vegan cookbook"))
+    // The old row can still be fading out when the new title appears.
+    waitForAbsence(text("Cookbook"))
   }
 
   func testDeleteWishFromEditor() {
@@ -85,8 +91,7 @@ final class OwnerUITests: WishlistUITestCase {
 
   func testDeleteWishBySwiping() {
     openChristmas()
-    waitFor(app.cells.containing(.staticText, identifier: "Espresso cups").firstMatch).swipeLeft()
-    waitFor(button("Delete")).tap()
+    revealSwipeActions(of: app.cells.containing(.staticText, identifier: "Espresso cups").firstMatch, action: "Delete").tap()
     confirm("Delete")
     waitForAbsence(text("Espresso cups"))
   }

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Router, type Request } from 'express';
+import { publicOrigin } from '../app-links.js';
 import { optionalAuth } from '../auth.js';
 import { config } from '../config.js';
 import type { DB } from '../db.js';
@@ -92,7 +93,7 @@ export function sharedRouter(db: DB): Router {
         }
       | undefined;
 
-    const origin = config.publicUrl ?? `${req.protocol}://${req.get('host')}`;
+    const origin = publicOrigin(req, config.publicUrl);
     res
       .type('html')
       .set('Cache-Control', 'no-store')

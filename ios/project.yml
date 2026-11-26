@@ -101,7 +101,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(WISHLIST_BUNDLE_ID).uitests
         GENERATE_INFOPLIST_FILE: YES
-        # XCTestCase's overrides are nonisolated; the app's MainActor default breaks them.
+        # XCTestCase's overrides are nonisolated, so the app's MainActor default breaks them; the test classes
+        # are @MainActor instead (XCUIApplication and XCUIElement are main-actor types).
         SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
         TEST_TARGET_NAME: Wishlist
 

@@ -52,7 +52,7 @@ final class GuestUITests: WishlistUITestCase {
     waitFor(app.alerts.firstMatch)
     confirm("Undo")
     let reopened = expectation(for: NSPredicate(format: "label == 'Still needed'"), evaluatedWith: status)
-    wait(for: [reopened], timeout: 5)
+    wait(for: [reopened], timeout: Self.defaultTimeout)
   }
 
   func testBuyRemainingQuantity() {
@@ -99,7 +99,7 @@ final class GuestUITests: WishlistUITestCase {
     XCTAssertEqual(follow.label, "Following")
     follow.tap()
     let unfollowed = expectation(for: NSPredicate(format: "label == 'Follow'"), evaluatedWith: follow)
-    wait(for: [unfollowed], timeout: 5)
+    wait(for: [unfollowed], timeout: Self.defaultTimeout)
 
     // Bob has no lists of his own, so without the followed one the start page shows its welcome.
     tap("guest.home")
@@ -109,8 +109,7 @@ final class GuestUITests: WishlistUITestCase {
 
   func testUnfollowFromStartPage() {
     launch(signedInAs: .bob)
-    waitFor(text("Christmas 2026")).swipeLeft()
-    button("Unfollow").tap()
+    revealSwipeActions(of: text("Christmas 2026"), action: "Unfollow").tap()
     expectToast(containing: "You no longer follow")
     waitForAbsence(text("Christmas 2026"))
   }
@@ -120,7 +119,7 @@ final class GuestUITests: WishlistUITestCase {
     openSharedLink()
     tap("guest.login")
     login(email: "bob@example.com")
-    waitFor(element("guest.follow"), timeout: 8)
+    waitFor(element("guest.follow"))
     waitFor(text("Ada's wishlist"))
   }
 }
@@ -173,7 +172,7 @@ final class PerformanceUITests: WishlistUITestCase {
     options.invocationOptions = [.manuallyStop]
     measure(metrics: [XCTOSSignpostMetric.navigationTransitionMetric], options: options) {
       waitForHittable(row).tap()
-      XCTAssertTrue(text("Wish 20").waitForExistence(timeout: 5))
+      XCTAssertTrue(text("Wish 20").waitForExistence(timeout: Self.defaultTimeout))
       stopMeasuring()
       app.navigationBars.buttons.element(boundBy: 0).tap()
       waitForHittable(row)
@@ -183,7 +182,7 @@ final class PerformanceUITests: WishlistUITestCase {
   @discardableResult
   private func waitForHittable(_ element: XCUIElement) -> XCUIElement {
     let hittable = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: element)
-    XCTAssertEqual(XCTWaiter().wait(for: [hittable], timeout: 5), .completed, "\(element) is not hittable")
+    XCTAssertEqual(XCTWaiter().wait(for: [hittable], timeout: Self.defaultTimeout), .completed, "\(element) is not hittable")
     return element
   }
 }

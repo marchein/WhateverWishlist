@@ -66,6 +66,17 @@ private func item(
     #expect(DeepLink.shareToken(from: URL(string: "whateverwishlist:///s/\(token)")!, scheme: "whateverwishlist") == token)
   }
 
+  @Test func destinations() {
+    let scheme = "whateverwishlist"
+    #expect(DeepLink.destination(from: URL(string: "https://wishlist.hein.cx/s/\(token)")!, scheme: scheme) == .wishlist(token: token))
+    #expect(DeepLink.destination(from: URL(string: "https://wishlist.hein.cx/wishlists")!, scheme: scheme) == .overview)
+    #expect(DeepLink.destination(from: URL(string: "https://wishlist.hein.cx/status")!, scheme: scheme) == .status)
+    #expect(DeepLink.destination(from: URL(string: "whateverwishlist://status")!, scheme: scheme) == .status)
+    #expect(DeepLink.destination(from: URL(string: "whateverwishlist://wishlists")!, scheme: scheme) == .overview)
+    #expect(DeepLink.destination(from: URL(string: "https://wishlist.hein.cx/login")!, scheme: scheme) == nil)
+    #expect(DeepLink.destination(from: URL(string: "mailto:someone@example.com")!, scheme: scheme) == nil)
+  }
+
   @Test func pastedMessagesAndBareTokens() {
     let message = "My wishlist: Christmas https://wishlist.hein.cx/s/\(token) – see you!"
     #expect(DeepLink.shareToken(fromText: message, scheme: "whateverwishlist") == token)

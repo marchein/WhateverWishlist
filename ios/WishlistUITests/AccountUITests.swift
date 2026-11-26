@@ -18,7 +18,7 @@ final class AccountUITests: WishlistUITestCase {
   func testLoginAndLogout() {
     launch()
     login(email: "ada@example.com")
-    waitFor(text("Christmas 2026"), timeout: 8)
+    waitFor(text("Christmas 2026"))
 
     tap("wishlists.account")
     tap("wishlists.logout")
@@ -31,8 +31,11 @@ final class AccountUITests: WishlistUITestCase {
     waitFor(app.segmentedControls.buttons["Create account"]).tap()
     type("Carla", into: "login.name")
     login(email: "carla@example.com")
-    waitFor(text("Hi Carla!"), timeout: 8)
     waitFor(button("Create my first wishlist"))
+    // The greeting is a navigation subtitle, which only iPhones on iOS 26 and later show.
+    if #available(iOS 26.0, *), UIDevice.current.userInterfaceIdiom == .phone {
+      waitFor(text("Hi Carla!"))
+    }
   }
 
   func testRegisterWithTakenEmailShowsError() {
@@ -55,7 +58,9 @@ final class StatusUITests: WishlistUITestCase {
     launch()
     tap("nav.status")
     // iOS 27 reads the row's title along with the value ("Connected backend version, mock").
-    XCTAssertTrue(waitFor(element("status.backendVersion")).label.hasSuffix("mock"))
+    // The row exists while the version is still loading, so wait for the value itself.
+    waitFor(app.descendants(matching: .any).matching(
+      NSPredicate(format: "identifier == 'status.backendVersion' AND label ENDSWITH 'mock'")).firstMatch)
     waitFor(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'https://wishlist.test/api'")).firstMatch)
   }
 

@@ -204,6 +204,14 @@ final class Router {
     }
   }
 
+  func open(_ destination: DeepLink.Destination) {
+    switch destination {
+    case .wishlist(let token): show(token: token)
+    case .overview: popToRoot()
+    case .status: if path.last != .status { path.append(.status) }
+    }
+  }
+
   func popToRoot() {
     path.removeAll()
   }
