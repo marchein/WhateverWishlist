@@ -39,8 +39,9 @@ final class OwnerUITests: WishlistUITestCase {
     type("Look at this: https://shop.example/headphones", into: "editor.paste")
     tap("editor.fetch")
     waitFor(text("All details found"))
-    // The form redraws with the fetched details; wait for the field instead of reading it mid-update.
-    XCTAssertEqual(waitFor(element("editor.title")).value as? String, "Wireless Headphones")
+    // The form only builds rows on screen, and the fetched details push the title down; it also redraws
+    // while filling in, so wait for the value instead of reading it once.
+    waitFor(reveal(element("editor.title")), toHaveValue: "Wireless Headphones")
     tap("editor.save")
     reveal(text("Wireless Headphones"))
   }
@@ -49,8 +50,11 @@ final class OwnerUITests: WishlistUITestCase {
     openChristmas()
     tap("owner.addWish")
     type("Board game", into: "editor.title")
+    // The form only builds rows on screen; on small screens and iPad sheets the keyboard covers the rest.
+    reveal(element("editor.price"))
     type("19,99", into: "editor.price")
-    tap("priority.5")
+    reveal(element("priority.5")).tap()
+    reveal(element("editor.newLink"))
     type("shop.example/game", into: "editor.newLink")
     tap("editor.addLink")
     waitFor(labeled("shop.example"))

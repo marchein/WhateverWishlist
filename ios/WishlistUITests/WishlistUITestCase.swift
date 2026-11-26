@@ -78,6 +78,16 @@ class WishlistUITestCase: XCTestCase {
     add(attachment)
   }
 
+  /// Waits until a field shows the given text; forms redraw while filling in, so a single read can be stale.
+  func waitFor(_ element: XCUIElement, toHaveValue value: String, timeout: TimeInterval = defaultTimeout,
+               file: StaticString = #filePath, line: UInt = #line) {
+    let matches = expectation(for: NSPredicate(format: "value == %@", value), evaluatedWith: element)
+    if XCTWaiter().wait(for: [matches], timeout: timeout) != .completed {
+      attachHierarchy()
+      XCTFail("\(element) has value \(String(describing: element.value)), expected \"\(value)\"", file: file, line: line)
+    }
+  }
+
   func waitForAbsence(_ element: XCUIElement, timeout: TimeInterval = defaultTimeout, file: StaticString = #filePath, line: UInt = #line) {
     let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: element)
     XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: timeout), .completed, "\(element) is still shown", file: file, line: line)
@@ -212,17 +222,31 @@ class WishlistUITestCase: XCTestCase {
     _ = element.waitForExistence(timeout: 3)
     for _ in 0..<maxSwipes {
       if element.exists, element.isHittable, isAboveToolbar(element) { return element }
-      app.swipeUp(velocity: .slow)
+      // Scroll back if an earlier swipe moved the element past the top (e.g. under the navigation bar).
+      if element.exists, element.frame.midY < app.frame.midY {
+        app.swipeDown(velocity: .slow)
+      } else {
+        app.swipeUp(velocity: .slow)
+      }
     }
     if !element.isHittable { waitFor(element, file: file, line: line) }
     return element
   }
 
-  /// A row partly behind the bottom toolbar counts as hittable, but swipes and taps on its centre hit the toolbar.
+  /// A row partly behind the bottom toolbar or the keyboard counts as hittable, but swipes and taps on its
+  /// centre hit the toolbar or a key.
   private func isAboveToolbar(_ element: XCUIElement) -> Bool {
-    let toolbar = app.toolbars.firstMatch
-    guard toolbar.exists, !toolbar.frame.isEmpty else { return true }
-    return element.frame.maxY <= toolbar.frame.minY
+    let screen = app.frame
+    let keyboard = app.keyboards.firstMatch
+    let keyboardFrame = keyboard.exists && !keyboard.frame.isEmpty ? keyboard.frame : nil
+    // iOS 27 also reports toolbar containers spanning the whole screen; only bars along the bottom (or on top
+    // of the keyboard, like its "Close" bar) cover rows.
+    let bottomBars = app.toolbars.allElementsBoundByIndex.map(\.frame).filter { bar in
+      !bar.isEmpty && bar.height < screen.height / 3
+        && (bar.maxY >= screen.maxY - 1 || keyboardFrame.map { abs(bar.maxY - $0.minY) <= 1 } == true)
+    }
+    let covers = bottomBars + (keyboardFrame.map { [$0] } ?? [])
+    return covers.allSatisfy { element.frame.maxY <= $0.minY }
   }
 
   func scrollTo(_ element: XCUIElement, maxSwipes: Int = 8) {
